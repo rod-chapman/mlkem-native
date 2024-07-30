@@ -63,7 +63,13 @@ void poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], const poly *a);
 void poly_decompress(poly *r, const uint8_t a[KYBER_POLYCOMPRESSEDBYTES]);
 
 #define poly_tobytes KYBER_NAMESPACE(poly_tobytes)
-void poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a);
+void poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a)
+/* *INDENT-OFF* */
+__CPROVER_requires(__CPROVER_forall { unsigned k; (k < KYBER_N) ==> ( -KYBER_Q < a->coeffs[k] && a->coeffs[k] < KYBER_Q ) } )
+__CPROVER_assigns(__CPROVER_object_whole(r));
+/* *INDENT-ON* */
+
+
 #define poly_frombytes KYBER_NAMESPACE(poly_frombytes)
 void poly_frombytes(poly *r, const uint8_t a[KYBER_POLYBYTES]);
 

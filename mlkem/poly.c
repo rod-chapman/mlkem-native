@@ -257,16 +257,18 @@ __CPROVER_ensures(
 void poly_tobytes(uint8_t r[KYBER_POLYBYTES], const poly *a)
 {
     unsigned int i;
-    uint16_t t0, t1;
 
     for (i = 0; i < KYBER_N / 2; i++)
+        __CPROVER_assigns(i, __CPROVER_object_whole(r))
+        __CPROVER_loop_invariant(i <= KYBER_N)
     {
         // map to positive standard representatives
         // REF-CHANGE: Hoist signed-to-unsigned conversion into separate function
-        t0 = scalar_signed_to_unsigned_q_16(a->coeffs[2 * i]);
-        t1 = scalar_signed_to_unsigned_q_16(a->coeffs[2 * i + 1]);
-        r[3 * i + 0] = (t0 >> 0);
-        r[3 * i + 1] = (t0 >> 8) | (t1 << 4);
+        uint16_t t0 = scalar_signed_to_unsigned_q_16(a->coeffs[2 * i]);
+        uint16_t t1 = scalar_signed_to_unsigned_q_16(a->coeffs[2 * i + 1]);
+
+        r[3 * i + 0] = (t0 >> 0) & 0xff;
+        r[3 * i + 1] = ((t0 >> 8) & 0xff) | ((t1 << 4) & 0xff);
         r[3 * i + 2] = (t1 >> 4);
     }
 }
