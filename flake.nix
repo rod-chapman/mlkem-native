@@ -21,14 +21,15 @@
           cbmcpkg = builtins.attrValues
             {
               cbmc = pkgs.cbmc.overrideAttrs (old: rec {
-                version = "a8b8f0fd2ad2166d71ccce97dd6925198a018144";
+                version = "b3359791bcc1a6651646920c3936ce167465db92";
                 src = pkgs.fetchFromGitHub {
                   owner = "diffblue";
                   repo = old.pname;
                   rev = "${version}";
-                  hash = "sha256-mPRkkKN7Hz9Qi6a3fEwVFh7a9OaBFcksNw9qwNOarao=";
+                  hash = "sha256-zxlEel/HlCrz4Shy+4WZX7up4qm5h2FoP77kngi8XAo=";
                 };
-              }); # 6.0.0
+                patches = [ ];
+              }); # 6.1.1
               litani = pkgs.callPackage ./litani.nix { }; # 1.29.0
               cbmc-viewer = pkgs.callPackage ./cbmc-viewer.nix { }; # 3.8
 
@@ -55,20 +56,21 @@
 
           core =
             let
-              # for x86_64 machine, cross compiled gcc needed to be wrapped with glibc this way for static compilation
-              cross-gcc = with pkgs; wrapCCWith {
-                cc = callPackage ./arm-gnu-gcc.nix { };
-                bintools = with pkgsCross.aarch64-multiplatform; wrapBintoolsWith {
-                  bintools = binutils-unwrapped;
-                  libc = glibc.static;
-                };
-              };
               aarch64-gcc =
-                if pkgs.stdenv.isx86_64
-                then [ cross-gcc ]
-                else [ (pkgs.gcc13.override { propagateDoc = true; isGNU = true; }) pkgs.glibc pkgs.glibc.static ];
+                pkgs.lib.optionals
+                  (! (pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64))
+                  [
+                    (
+                      pkgs.pkgsCross.aarch64-multiplatform.buildPackages.gcc13.override {
+                        propagateDoc = true;
+                        isGNU = true;
+                      }
+                    )
+                    pkgs.pkgsCross.aarch64-multiplatform.glibc
+                    pkgs.pkgsCross.aarch64-multiplatform.glibc.static
+                  ];
             in
-            pkgs.lib.optionals pkgs.stdenv.isLinux aarch64-gcc ++
+            aarch64-gcc ++
             builtins.attrValues {
               inherit (pkgs)
                 yq
