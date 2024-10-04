@@ -153,7 +153,7 @@ i == len)
 FORALL { int k; (0 <= k && k < len) ==> dst[k] == 0 }
 ```
 
-The loop exit condition means that we can just substitute `i` for `len` in the hypotheses, to get:
+The loop exit condition means that we can just replace `i` with `len` in the hypotheses, to get:
 
 ```
 len >= 0 &&
