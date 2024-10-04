@@ -1,6 +1,11 @@
 # CBMC Proof Guide and Cookbook for MLKEM-C
 
-This doc acts as a guide to developing proofs of C code using CBMC.
+This doc acts as a guide to developing proofs of C code using CBMC. It concentrates
+on the use of _contracts_ to achieve _unbounded_ and _modular_ proofs of type-safety
+and correctness properties.
+
+This document uses the abbreviated forms of the CBMC contracts defined by macros in the
+cbmc.h header file in the MLKEM-C sources.
 
 ## Common Proof Patterns
 
@@ -79,7 +84,7 @@ The function specification is extended:
 
 ```
 void zero_array_correct (uint8_t *dst, int len)
-REQUIES(IS_FRESH(dst, len))
+REQUIRES(IS_FRESH(dst, len))
 ASSIGNS(OBJECT_WHOLE(dst))
 ENSURES(FORALL { int k; (0 <= k && k < len) ==> dst[k] == 0 });
 ```
