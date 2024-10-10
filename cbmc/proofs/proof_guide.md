@@ -11,17 +11,19 @@ cbmc.h h
 
 Installing CBMC can be a bit error prone. The main issue is to make sure that you have exactly the right version of CBMC, its supporting tools (cbmc-viewer and cbmc-starter-kit), and the underlying solvers all installed.
 
-If you project has a "NIX" environment set up, then use that.
+If your project has a "NIX" environment set up, then use that.
 
 You'll often need the "latest" build of CBMC (to get the most recent bug-fixes) but those latest builds take a while to appear in package managers like APT or DPKG on Linux and Homebrew on macOS. In that case, you'll need to download the build that you need from [here](https://github.com/diffblue/cbmc/releases) BUT those packages do NOT include the supporting tools or solvers.
 
-At the time of writing, you should also make sure that you have:
+At the time of writing, you should make sure that you have:
 
 CBMC 6.3.1 or higher [here](https://github.com/diffblue/cbmc/releases)
 
 CBMC-Viewer 3.9 [here](https://github.com/model-checking/cbmc-viewer/releases)
 
 cbmc-starter-kit 2.11[here](https://github.com/model-checking/cbmc-starter-kit)
+
+Litani 1.29 - available via `brew install litani` on macOS, or standard package managers on Linux.
 
 Z3 4.12.5 or better [here](https://github.com/Z3Prover/z3/releases)
 
@@ -33,9 +35,104 @@ Cadical 2.0.0 [here](https://github.com/arminbiere/cadical/releases)
 
 All of these tools must be on your PATH. Make sure they're all working (w.g. with `z3 --version` and so on) before you proceed.
 
+## Running existing proofs
 
+It's best to start by re-playing some existing proofs to see how they work. There are a few ways to do this. By "proof" in this context, we really mean "proof of a single C function, including proof of all the assertions, loop invariants, the post-condition and type-safety checks."
+
+Typically, a project will have a on subdirectory per function, each of which contains a `Makefile` that configures the proof run for that function, and the "harness" function that CBMC needs.
+
+Let's do a concrete example - the proof of the `poly_decompress` function from the PQCP AArch64-C-MLKEM repo [here](https://github.com/pq-code-package/mlkem-c-aarch64/tree/main/cbmc/proofs/poly_decompress)
+
+If everything is set up, `cd` to that directory. You can run the proof to get output in HTML or plaintext.
+
+### Single function proof, plaintext output
+
+The Makefile contains a target called `result` that generates output of CBMC in plaintext only, and avoids the HTML reporting steps. The output appears in `logs/result.txt`, so
+
+```
+cd cbmc/proofs/poly_decompress
+make result
+less logs/result.txt
+```
+
+You should see a file that ends with something like:
+```
+** 0 of 225 failed (1 iterations)
+VERIFICATION SUCCESSFUL
+```
+
+which is good news. If the run fails, then this file is the place to look to see what went wrong.
+
+### Single function proof, HTML report
+
+The default Makefile target generates HTML, so
+
+```
+cd cbmc/proofs/poly_decompress
+make
+```
+
+generates report/html/index.html that can be opened in your Browser.
+
+### Proving all functions
+
+In CI, we want to prove all the functions. This is done from the "proofs" subdirectory, where there's a script called `run-cbmc-proofs.py`
+
+To run that manually, it's just
+
+```
+cd cbmc/proofs
+./run-cbmc-proofs.py --summarize -j8
+```
+
+where "8" is the number of processor cores that litani can use to run things in parallel. On a big EC2 instance, increase that to `-j32` or whatever.
+
+That should get you something like this:
+
+```
+| Status  | Count |
+|---------|-------|
+| Success | 8     |
+
+| Proof                          | Status  |
+|--------------------------------|---------|
+| poly_compress                  | Success |
+| poly_decompress                | Success |
+| scalar_compress_q_16           | Success |
+| scalar_compress_q_32           | Success |
+| scalar_decompress_q_16         | Success |
+| scalar_decompress_q_32         | Success |
+| scalar_signed_to_unsigned_q_16 | Success |
+
+```
+which looks good.
+
+This what you should run to check that everything is OK before you push new code changes or an entirely new proof.
 
 ## Common Proof Patterns
+
+### Assignments, initialization, and variables
+
+1. Declare variables with as small a scope as possible. Declare and initialize a variable close to where it is needed.
+
+2. Always make variables `const` if they are initialized and then read-only from then on.
+
+3. Initialize arrays and structs at the point of declaration using an initializing expression. Don't use a sequence of element-by-element assignments.  For example.
+
+DON'T WRITE:
+```
+  int a[3];
+  a[0] = 1;
+  a[1] = 2;
+  a[2] = 3;
+```
+
+DO WRITE:
+```
+int a[3] = { 1, 2, 3 };
+```
+
+and so on.
 
 ### Loops (general advice)
 
