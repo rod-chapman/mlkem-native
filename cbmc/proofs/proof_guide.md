@@ -5,7 +5,33 @@ on the use of _contracts_ to achieve _unbounded_ and _modular_ proofs of type-sa
 and correctness properties.
 
 This document uses the abbreviated forms of the CBMC contracts defined by macros in the
-cbmc.h header file in the MLKEM-C sources.
+cbmc.h h
+
+## Installation and getting started
+
+Installing CBMC can be a bit error prone. The main issue is to make sure that you have exactly the right version of CBMC, its supporting tools (cbmc-viewer and cbmc-starter-kit), and the underlying solvers all installed.
+
+If you project has a "NIX" environment set up, then use that.
+
+You'll often need the "latest" build of CBMC (to get the most recent bug-fixes) but those latest builds take a while to appear in package managers like APT or DPKG on Linux and Homebrew on macOS. In that case, you'll need to download the build that you need from [here](https://github.com/diffblue/cbmc/releases) BUT those packages do NOT include the supporting tools or solvers.
+
+At the time of writing, you should also make sure that you have:
+
+CBMC-Viewer 3.9 [here](https://github.com/model-checking/cbmc-viewer/releases)
+
+cbmc-starter-kit 2.11[here](https://github.com/model-checking/cbmc-starter-kit)
+
+Z3 4.12.5 or better [here](https://github.com/Z3Prover/z3/releases)
+
+Bitwuzla 0.5.0 [here](https://github.com/bitwuzla/bitwuzla/releases)
+
+Kissat 3.1.1 [here](https://github.com/arminbiere/kissat/releases)
+
+Cadical 2.0.0 [here](https://github.com/arminbiere/cadical/releases)
+
+All of these tools must be on your PATH. Make sure they're all working (w.g. with `z3 --version` and so on) before you proceed.
+
+
 
 ## Common Proof Patterns
 
