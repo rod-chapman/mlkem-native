@@ -17,6 +17,8 @@ You'll often need the "latest" build of CBMC (to get the most recent bug-fixes) 
 
 At the time of writing, you should also make sure that you have:
 
+CBMC 6.3.1 or higher [here](https://github.com/diffblue/cbmc/releases)
+
 CBMC-Viewer 3.9 [here](https://github.com/model-checking/cbmc-viewer/releases)
 
 cbmc-starter-kit 2.11[here](https://github.com/model-checking/cbmc-starter-kit)
