@@ -344,6 +344,10 @@ __contract__(
 {
   int j;
   for (j = 0; j < 64; j++)
+  __loop__(
+    invariant(j >= 0 && j <= 64)
+    invariant(array_abs_bound(r,     0,     j * 4 - 1, NTT_BOUND8))
+    invariant(array_abs_bound(r, j * 4, (MLKEM_N - 1), NTT_BOUND7)))
   {
     ntt_layer7_slice(r, j, j * 4);
   }
