@@ -170,12 +170,14 @@ __contract__(
 STATIC_INLINE_TESTABLE void ntt_layer45_slice(pc r, int zeta_subtree_index,
                                               int start)
 __contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
   requires(zeta_subtree_index >= 0)
   requires(zeta_subtree_index <= 7)
   requires(start >= 0)
   requires(start <= 224)
   requires(array_abs_bound(r,          0,    start -  1, NTT_BOUND6))
-  requires(array_abs_bound(r,      start,    start + 31, NTT_BOUND4))
+  requires(array_abs_bound(r,      start, (MLKEM_N - 1), NTT_BOUND4))
+  assigns(memory_slice(r, sizeof(pc)))
   ensures (array_abs_bound(r,          0,    start + 31, NTT_BOUND6))
   ensures (array_abs_bound(r, start + 32, (MLKEM_N - 1), NTT_BOUND4)))
 {
@@ -184,8 +186,20 @@ __contract__(
   const int32_t z2 = (int32_t)zeds.left_child_zeta;
   const int32_t z3 = (int32_t)zeds.right_child_zeta;
 
+
   int j;
   for (j = 0; j < 8; j++)
+  __loop__(
+    invariant(j >= 0 && j <= 8)
+    invariant(array_abs_bound(r,              0,     start -  1, NTT_BOUND6))
+    invariant(array_abs_bound(r,      start + 0,  start + j - 1, NTT_BOUND6))
+    invariant(array_abs_bound(r,      start + j,      start + 7, NTT_BOUND4))
+    invariant(array_abs_bound(r,      start + 8,  start + j + 7, NTT_BOUND6))
+    invariant(array_abs_bound(r,  start + j + 8,     start + 15, NTT_BOUND4))
+    invariant(array_abs_bound(r,     start + 16, start + j + 15, NTT_BOUND6))
+    invariant(array_abs_bound(r, start + j + 16,     start + 23, NTT_BOUND4))
+    invariant(array_abs_bound(r,     start + 24, start + j + 23, NTT_BOUND6))
+    invariant(array_abs_bound(r, start + j + 24,  (MLKEM_N - 1), NTT_BOUND4)))
   {
     const int ci1 = j + start;
     const int ci2 = ci1 + 8;
@@ -194,23 +208,23 @@ __contract__(
     int16_t t1, t2;
 
     /* Layer 4 */
-    t1 = fqmul(z1, r[ci3]);
+    t1 = fqmul(r[ci3], z1);
     t2 = r[ci1];
     r[ci3] = t2 - t1;
     r[ci1] = t2 + t1;
 
-    t1 = fqmul(z1, r[ci4]);
+    t1 = fqmul(r[ci4], z1);
     t2 = r[ci2];
     r[ci4] = t2 - t1;
     r[ci2] = t2 + t1;
 
     /* Layer 5 */
-    t1 = fqmul(z2, r[ci2]);
+    t1 = fqmul(r[ci2], z2);
     t2 = r[ci1];
     r[ci2] = t2 - t1;
     r[ci1] = t2 + t1;
 
-    t1 = fqmul(z3, r[ci4]);
+    t1 = fqmul(r[ci4], z3);
     t2 = r[ci3];
     r[ci4] = t2 - t1;
     r[ci3] = t2 + t1;
