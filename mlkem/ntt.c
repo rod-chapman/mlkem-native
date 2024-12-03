@@ -291,6 +291,10 @@ __contract__(
 {
   int j;
   for (j = 0; j < 32; j++)
+  __loop__(
+    invariant(j >= 0 && j <= 32)
+    invariant(array_abs_bound(r,     0,     j * 8 - 1, NTT_BOUND7))
+    invariant(array_abs_bound(r, j * 8, (MLKEM_N - 1), NTT_BOUND6)))
   {
     ntt_layer6_slice(r, j, j * 8);
   }
