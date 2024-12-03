@@ -174,10 +174,10 @@ __contract__(
   requires(zeta_subtree_index <= 7)
   requires(start >= 0)
   requires(start <= 224)
-  requires(array_abs_bound(r,start,start + 31,NTT_BOUND4))
-  ensures (forall(int,i,0,(start - 1),(r[i] == old(*(pc *)r)[i])))
-  ensures (array_abs_bound(r,start,start + 31,NTT_BOUND6))
-  ensures (forall(int,k,start + 32,(MLKEM_N - 1),(r[k] == old(*(pc *)r)[k]))))
+  requires(array_abs_bound(r,          0,    start -  1, NTT_BOUND6))
+  requires(array_abs_bound(r,      start,    start + 31, NTT_BOUND4))
+  ensures (array_abs_bound(r,          0,    start + 31, NTT_BOUND6))
+  ensures (array_abs_bound(r, start + 32, (MLKEM_N - 1), NTT_BOUND4)))
 {
   const zeta_subtree_entry zeds = layer45_zetas[zeta_subtree_index];
   const int32_t z1 = zeds.parent_zeta;
