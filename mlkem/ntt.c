@@ -301,6 +301,15 @@ __contract__(
 }
 
 STATIC_INLINE_TESTABLE void ntt_layer7_slice(pc r, int zeta_index, int start)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(zeta_index >= 0 && zeta_index <= 63)
+  requires(start >= 0 && start <= 252)
+  requires(array_abs_bound(r,          0,    start -  1, NTT_BOUND8))
+  requires(array_abs_bound(r,      start, (MLKEM_N - 1), NTT_BOUND7))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures (array_abs_bound(r,         0,     start + 3, NTT_BOUND8))
+  ensures (array_abs_bound(r, start + 4, (MLKEM_N - 1), NTT_BOUND7)))
 {
   const int32_t zeta = (int32_t)layer7_zetas[zeta_index];
   /* Coefficient indexes 0 through 3 */
@@ -317,8 +326,8 @@ STATIC_INLINE_TESTABLE void ntt_layer7_slice(pc r, int zeta_index, int start)
   const int16_t c2 = r[ci2];
   const int16_t c3 = r[ci3];
 
-  const int16_t zc2 = fqmul(zeta, c2);
-  const int16_t zc3 = fqmul(zeta, c3);
+  const int16_t zc2 = fqmul(c2, zeta);
+  const int16_t zc3 = fqmul(c3, zeta);
 
   r[ci0] = c0 + zc2;
   r[ci1] = c1 + zc3;
