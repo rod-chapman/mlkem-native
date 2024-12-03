@@ -9,140 +9,299 @@
 
 #include "arith_native.h"
 #include "debug/debug.h"
-#include "ntt.h"
 
 #if !defined(MLKEM_USE_NATIVE_NTT)
-/*
- * Computes a block CT butterflies with a fixed twiddle factor,
- * using Montgomery multiplication.
- * Parameters:
- * - r: Pointer to base of polynomial (_not_ the base of butterfly block)
- * - root: Twiddle factor to use for the butterfly. This must be in
- *         Montgomery form and signed canonical.
- * - start: Offset to the beginning of the butterfly block
- * - len: Index difference between coefficients subject to a butterfly
- * - bound: Ghost variable describing coefficient bound: Prior to `start`,
- *          coefficients must be bound by `bound + MLKEM_Q`. Post `start`,
- *          they must be bound by `bound`.
- * When this function returns, output coefficients in the index range
- * [start, start+2*len) have bound bumped to `bound + MLKEM_Q`.
- * Example:
- * - start=8, len=4
- *   This would compute the following four butterflies
- *          8     --    12
- *             9    --     13
- *                10   --     14
- *                   11   --     15
- * - start=4, len=2
- *   This would compute the following two butterflies
- *          4 -- 6
- *             5 -- 7
- */
-STATIC_TESTABLE
-void ntt_butterfly_block(int16_t r[MLKEM_N], int16_t zeta, int start, int len,
-                         int bound)
-__contract__(
-  requires(0 <= start && start < MLKEM_N)
-  requires(1 <= len && len <= MLKEM_N / 2 && start + 2 * len <= MLKEM_N)
-  requires(0 <= bound && bound < INT16_MAX - MLKEM_Q)
-  requires(-HALF_Q < zeta && zeta < HALF_Q)
-  requires(memory_no_alias(r, sizeof(int16_t) * MLKEM_N))
-  requires(array_abs_bound(r, 0, start - 1, bound + MLKEM_Q))
-  requires(array_abs_bound(r, start, MLKEM_N - 1, bound))
-  assigns(memory_slice(r, sizeof(int16_t) * MLKEM_N))
-  ensures(array_abs_bound(r, 0, start + 2*len - 1, bound + MLKEM_Q))
-  ensures(array_abs_bound(r, start + 2 * len, MLKEM_N - 1, bound)))
+
+#define NTT_BOUND4 (4 * MLKEM_Q - 1)
+#define NTT_BOUND6 (6 * MLKEM_Q - 1)
+#define NTT_BOUND7 (7 * MLKEM_Q - 1)
+#define NTT_BOUND8 (8 * MLKEM_Q - 1)
+
+typedef int16_t pc[MLKEM_N];
+
+/* nb stucture this as 1 32-bit integer and 2 16-bit integers            */
+/* so the whole thing can be accessed with a single 64-bit aligned read. */
+typedef struct
 {
-  /* `bound` is a ghost variable only needed in the CBMC specification */
+  int32_t parent_zeta;
+  int16_t left_child_zeta;
+  int16_t right_child_zeta;
+} zeta_subtree_entry;
+
+const zeta_subtree_entry layer45_zetas[8] = {
+    {-171, 573, -1325},  {622, 264, 383},    {1577, -829, 1458},
+    {182, -1602, -130},  {962, -681, 1017},  {-1202, 732, 608},
+    {-1474, -1542, 411}, {1468, -205, -1571}};
+
+const int16_t layer6_zetas[32] = {
+    1223, 652,   -552,  1015, -1293, 1491, -282, -1544, 516, -8,    -320,
+    -666, -1618, -1162, 126,  1469,  -853, -90,  -271,  830, 107,   -1421,
+    -247, -951,  -398,  961,  -1508, -725, 448,  -1065, 677, -1275,
+};
+
+const int16_t layer7_zetas[64] = {
+    /* Layer 7 - index 64 .. 127 */
+    -1103, 430,  555,   843,   -1251, 871,   1550,  105,   422,   587,  177,
+    -235,  -291, -460,  1574,  1653,  -246,  778,   1159,  -147,  -777, 1483,
+    -602,  1119, -1590, 644,   -872,  349,   418,   329,   -156,  -75,  817,
+    1097,  603,  610,   1322,  -1285, -1465, 384,   -1215, -136,  1218, -1335,
+    -874,  220,  -1187, -1659, -1185, -1530, -1278, 794,   -1510, -854, -870,
+    478,   -108, -308,  996,   991,   958,   -1460, 1522,  1628};
+
+
+STATIC_INLINE_TESTABLE void ntt_layer123(pc r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(array_abs_bound(r, 0, MLKEM_N - 1, MLKEM_Q - 1))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND4)))
+{
+  const int32_t z1 = -758;
+
+  const int32_t z2 = -359;
+  const int32_t z3 = -1517;
+  const int32_t z4 = 1493;
+  const int32_t z5 = 1422;
+  const int32_t z6 = 287;
+  const int32_t z7 = 202;
+
   int j;
-  ((void)bound);
-  for (j = start; j < start + len; j++)
-  __loop__(
-    invariant(start <= j && j <= start + len)
-    /*
-     * Coefficients are updated in strided pairs, so the bounds for the
-     * intermediate states alternate twice between the old and new bound
-     */
-    invariant(array_abs_bound(r, 0,           j - 1,           bound + MLKEM_Q))
-    invariant(array_abs_bound(r, j,           start + len - 1, bound))
-    invariant(array_abs_bound(r, start + len, j + len - 1,     bound + MLKEM_Q))
-    invariant(array_abs_bound(r, j + len,     MLKEM_N - 1,     bound)))
+  for (j = 0; j < 32; j++)
   {
-    int16_t t;
-    t = fqmul(r[j + len], zeta);
-    r[j + len] = r[j] - t;
-    r[j] = r[j] + t;
+    const int ci1 = j + 0;
+    const int ci2 = j + 32;
+    const int ci3 = j + 64;
+    const int ci4 = j + 96;
+    const int ci5 = j + 128;
+    const int ci6 = j + 160;
+    const int ci7 = j + 192;
+    const int ci8 = j + 224;
+    int16_t t1, t2;
+
+    /* Layer 1 */
+    t1 = fqmul(z1, r[ci5]);
+    t2 = r[ci1];
+    r[ci5] = t2 - t1;
+    r[ci1] = t2 + t1;
+
+    t1 = fqmul(z1, r[ci7]);
+    t2 = r[ci3];
+    r[ci7] = t2 - t1;
+    r[ci3] = t2 + t1;
+
+    t1 = fqmul(z1, r[ci6]);
+    t2 = r[ci2];
+    r[ci6] = t2 - t1;
+    r[ci2] = t2 + t1;
+
+    t1 = fqmul(z1, r[ci8]);
+    t2 = r[ci4];
+    r[ci8] = t2 - t1;
+    r[ci4] = t2 + t1;
+
+    /* Layer 2 */
+    t1 = fqmul(z2, r[ci3]);
+    t2 = r[ci1];
+    r[ci3] = t2 - t1;
+    r[ci1] = t2 + t1;
+
+    t1 = fqmul(z3, r[ci7]);
+    t2 = r[ci5];
+    r[ci7] = t2 - t1;
+    r[ci5] = t2 + t1;
+
+    t1 = fqmul(z2, r[ci4]);
+    t2 = r[ci2];
+    r[ci4] = t2 - t1;
+    r[ci2] = t2 + t1;
+
+    t1 = fqmul(z3, r[ci8]);
+    t2 = r[ci6];
+    r[ci8] = t2 - t1;
+    r[ci6] = t2 + t1;
+
+    /* Layer 3 */
+    t1 = fqmul(z4, r[ci2]);
+    t2 = r[ci1];
+    r[ci2] = t2 - t1;
+    r[ci1] = t2 + t1;
+
+    t1 = fqmul(z5, r[ci4]);
+    t2 = r[ci3];
+    r[ci4] = t2 - t1;
+    r[ci3] = t2 + t1;
+
+    t1 = fqmul(z6, r[ci6]);
+    t2 = r[ci5];
+    r[ci6] = t2 - t1;
+    r[ci5] = t2 + t1;
+
+    t1 = fqmul(z7, r[ci8]);
+    t2 = r[ci7];
+    r[ci8] = t2 - t1;
+    r[ci7] = t2 + t1;
   }
 }
 
-/*
- *Compute one layer of forward NTT
- * Parameters:
- * - r: Pointer to base of polynomial
- * - len: Stride of butterflies in this layer.
- * - layer: Ghost variable indicating which layer is being applied.
- *          Must match `len` via `len == MLKEM_N >> layer`.
- * Note: `len` could be dropped and computed in the function, but
- *   we are following the structure of the reference NTT from the
- *   official Kyber implementation here, merely adding `layer` as
- *   a ghost variable for the specifications.
- */
-STATIC_TESTABLE
-void ntt_layer(int16_t r[MLKEM_N], int len, int layer)
+STATIC_INLINE_TESTABLE void ntt_layer45_slice(pc r, int zeta_subtree_index,
+                                              int start)
 __contract__(
-  requires(memory_no_alias(r, sizeof(int16_t) * MLKEM_N))
-  requires(1 <= layer && layer <= 7 && len == (MLKEM_N >> layer))
-  requires(array_abs_bound(r, 0, MLKEM_N - 1, layer * MLKEM_Q - 1))
-  assigns(memory_slice(r, sizeof(int16_t) * MLKEM_N))
-  ensures(array_abs_bound(r, 0, MLKEM_N - 1, (layer + 1) * MLKEM_Q - 1)))
+  requires(zeta_subtree_index >= 0)
+  requires(zeta_subtree_index <= 7)
+  requires(start >= 0)
+  requires(start <= 224)
+  requires(array_abs_bound(r,start,start + 31,NTT_BOUND4))
+  ensures (forall(int,i,0,(start - 1),(r[i] == old(*(pc *)r)[i])))
+  ensures (array_abs_bound(r,start,start + 31,NTT_BOUND6))
+  ensures (forall(int,k,start + 32,(MLKEM_N - 1),(r[k] == old(*(pc *)r)[k]))))
 {
-  int start, k;
-  /* `layer` is a ghost variable only needed in the CBMC specification */
-  ((void)layer);
-  /* Twiddle factors for layer n start at index 2^(layer-1) */
-  k = MLKEM_N / (2 * len);
-  for (start = 0; start < MLKEM_N; start += 2 * len)
-  __loop__(
-    invariant(0 <= start && start < MLKEM_N + 2 * len)
-    invariant(0 <= k && k <= MLKEM_N / 2 && 2 * len * k == start + MLKEM_N)
-    invariant(array_abs_bound(r, 0, start - 1, (layer * MLKEM_Q - 1) + MLKEM_Q))
-    invariant(array_abs_bound(r, start, MLKEM_N - 1, layer * MLKEM_Q - 1)))
+  const zeta_subtree_entry zeds = layer45_zetas[zeta_subtree_index];
+  const int32_t z1 = zeds.parent_zeta;
+  const int32_t z2 = (int32_t)zeds.left_child_zeta;
+  const int32_t z3 = (int32_t)zeds.right_child_zeta;
+
+  int j;
+  for (j = 0; j < 8; j++)
   {
-    int16_t zeta = zetas[k++];
-    ntt_butterfly_block(r, zeta, start, len, layer * MLKEM_Q - 1);
+    const int ci1 = j + start;
+    const int ci2 = ci1 + 8;
+    const int ci3 = ci1 + 16;
+    const int ci4 = ci1 + 24;
+    int16_t t1, t2;
+
+    /* Layer 4 */
+    t1 = fqmul(z1, r[ci3]);
+    t2 = r[ci1];
+    r[ci3] = t2 - t1;
+    r[ci1] = t2 + t1;
+
+    t1 = fqmul(z1, r[ci4]);
+    t2 = r[ci2];
+    r[ci4] = t2 - t1;
+    r[ci2] = t2 + t1;
+
+    /* Layer 5 */
+    t1 = fqmul(z2, r[ci2]);
+    t2 = r[ci1];
+    r[ci2] = t2 - t1;
+    r[ci1] = t2 + t1;
+
+    t1 = fqmul(z3, r[ci4]);
+    t2 = r[ci3];
+    r[ci4] = t2 - t1;
+    r[ci3] = t2 + t1;
   }
 }
 
-/*
- * Compute full forward NTT
- * NOTE: This particular implementation satisfies a much tighter
- * bound on the output coefficients (5*q) than the contractual one (8*q),
- * but this is not needed in the calling code. Should we change the
- * base multiplication strategy to require smaller NTT output bounds,
- * the proof may need strengthening.
- * REF-CHANGE: Removed indirection poly_ntt -> ntt()
- * and integrated polynomial reduction into the NTT.
- */
+
+STATIC_INLINE_TESTABLE void ntt_layer45(pc r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND4))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND6)))
+{
+  ntt_layer45_slice(r, 0, 0);
+  ntt_layer45_slice(r, 1, 32);
+  ntt_layer45_slice(r, 2, 64);
+  ntt_layer45_slice(r, 3, 96);
+  ntt_layer45_slice(r, 4, 128);
+  ntt_layer45_slice(r, 5, 160);
+  ntt_layer45_slice(r, 6, 192);
+  ntt_layer45_slice(r, 7, 224);
+}
+
+
+
+STATIC_INLINE_TESTABLE void ntt_layer6_slice(pc r, const int zeta_index,
+                                             const int start)
+{
+  const int16_t zeta = layer6_zetas[zeta_index];
+
+  int j;
+  for (j = 0; j < 4; j++)
+  {
+    const int ci1 = j + start;
+    const int ci2 = ci1 + 4;
+    const int16_t t = fqmul(zeta, r[ci2]);
+    const int16_t t2 = r[ci1];
+    r[ci2] = t2 - t;
+    r[ci1] = t2 + t;
+  }
+}
+
+STATIC_INLINE_TESTABLE void ntt_layer6(pc r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND6))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND7)))
+{
+  int j;
+  for (j = 0; j < 32; j++)
+  {
+    ntt_layer6_slice(r, j, j * 8);
+  }
+}
+
+STATIC_INLINE_TESTABLE void ntt_layer7_slice(pc r, int zeta_index, int start)
+{
+  const int32_t zeta = (int32_t)layer7_zetas[zeta_index];
+  /* Coefficient indexes 0 through 3 */
+  const unsigned int ci0 = start;
+  const unsigned int ci1 = ci0 + 1;
+  const unsigned int ci2 = ci0 + 2;
+  const unsigned int ci3 = ci0 + 3;
+
+  /* Read and write coefficients in natural order of
+   * increasing memory location
+   */
+  const int16_t c0 = r[ci0];
+  const int16_t c1 = r[ci1];
+  const int16_t c2 = r[ci2];
+  const int16_t c3 = r[ci3];
+
+  const int16_t zc2 = fqmul(zeta, c2);
+  const int16_t zc3 = fqmul(zeta, c3);
+
+  r[ci0] = c0 + zc2;
+  r[ci1] = c1 + zc3;
+  r[ci2] = c0 - zc2;
+  r[ci3] = c1 - zc3;
+}
+
+STATIC_INLINE_TESTABLE void ntt_layer7(pc r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND7))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND8)))
+{
+  int j;
+  for (j = 0; j < 64; j++)
+  {
+    ntt_layer7_slice(r, j, j * 4);
+  }
+}
 
 
 void poly_ntt(poly *p)
 {
-  int len, layer;
   int16_t *r;
   POLY_BOUND_MSG(p, MLKEM_Q, "ref ntt input");
   r = p->coeffs;
 
-  for (len = 128, layer = 1; len >= 2; len >>= 1, layer++)
-  __loop__(
-    invariant(1 <= layer && layer <= 8 && len == (MLKEM_N >> layer))
-    invariant(array_abs_bound(r, 0, MLKEM_N - 1, layer * MLKEM_Q - 1)))
-  {
-    ntt_layer(r, len, layer);
-  }
+  ntt_layer123(r);
+  ntt_layer45(r);
+  ntt_layer6(r);
+  ntt_layer7(r);
 
   /* Check the stronger bound */
   POLY_BOUND_MSG(p, NTT_BOUND, "ref ntt output");
 }
+
+
+
 #else  /* MLKEM_USE_NATIVE_NTT */
 
 /* Check that bound for native NTT implies contractual bound */
@@ -155,6 +314,8 @@ void poly_ntt(poly *p)
   POLY_BOUND_MSG(p, NTT_BOUND_NATIVE, "native ntt output");
 }
 #endif /* MLKEM_USE_NATIVE_NTT */
+
+
 
 #if !defined(MLKEM_USE_NATIVE_INTT)
 
