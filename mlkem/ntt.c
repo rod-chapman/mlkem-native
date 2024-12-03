@@ -171,10 +171,8 @@ STATIC_INLINE_TESTABLE void ntt_layer45_slice(pc r, int zeta_subtree_index,
                                               int start)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
-  requires(zeta_subtree_index >= 0)
-  requires(zeta_subtree_index <= 7)
-  requires(start >= 0)
-  requires(start <= 224)
+  requires(zeta_subtree_index >= 0 && zeta_subtree_index <= 7)
+  requires(start >= 0 && start <= 224)
   requires(array_abs_bound(r,          0,    start -  1, NTT_BOUND6))
   requires(array_abs_bound(r,      start, (MLKEM_N - 1), NTT_BOUND4))
   assigns(memory_slice(r, sizeof(pc)))
@@ -253,15 +251,31 @@ __contract__(
 
 STATIC_INLINE_TESTABLE void ntt_layer6_slice(pc r, const int zeta_index,
                                              const int start)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(zeta_index >= 0 && zeta_index <= 31)
+  requires(start >= 0 && start <= 248)
+  requires(array_abs_bound(r,          0,    start -  1, NTT_BOUND7))
+  requires(array_abs_bound(r,      start, (MLKEM_N - 1), NTT_BOUND6))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures (array_abs_bound(r,         0,     start + 7, NTT_BOUND7))
+  ensures (array_abs_bound(r, start + 8, (MLKEM_N - 1), NTT_BOUND6)))
 {
   const int16_t zeta = layer6_zetas[zeta_index];
 
   int j;
   for (j = 0; j < 4; j++)
+  __loop__(
+    invariant(j >= 0 && j <= 4)
+    invariant(array_abs_bound(r,             0,     start -  1, NTT_BOUND7))
+    invariant(array_abs_bound(r,     start + 0,  start + j - 1, NTT_BOUND7))
+    invariant(array_abs_bound(r,     start + j,      start + 3, NTT_BOUND6))
+    invariant(array_abs_bound(r,     start + 4,  start + j + 3, NTT_BOUND7))
+    invariant(array_abs_bound(r, start + j + 4,  (MLKEM_N - 1), NTT_BOUND6)))
   {
     const int ci1 = j + start;
     const int ci2 = ci1 + 4;
-    const int16_t t = fqmul(zeta, r[ci2]);
+    const int16_t t = fqmul(r[ci2], zeta);
     const int16_t t2 = r[ci1];
     r[ci2] = t2 - t;
     r[ci1] = t2 + t;
