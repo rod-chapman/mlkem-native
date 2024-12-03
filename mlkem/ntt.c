@@ -12,6 +12,7 @@
 
 #if !defined(MLKEM_USE_NATIVE_NTT)
 
+#define NTT_BOUND1 (MLKEM_Q - 1)
 #define NTT_BOUND4 (4 * MLKEM_Q - 1)
 #define NTT_BOUND6 (6 * MLKEM_Q - 1)
 #define NTT_BOUND7 (7 * MLKEM_Q - 1)
@@ -52,12 +53,11 @@ const int16_t layer7_zetas[64] = {
 STATIC_INLINE_TESTABLE void ntt_layer123(pc r)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
-  requires(array_abs_bound(r, 0, MLKEM_N - 1, MLKEM_Q - 1))
+  requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND1))
   assigns(memory_slice(r, sizeof(pc)))
   ensures(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND4)))
 {
   const int32_t z1 = -758;
-
   const int32_t z2 = -359;
   const int32_t z3 = -1517;
   const int32_t z4 = 1493;
@@ -67,6 +67,30 @@ __contract__(
 
   int j;
   for (j = 0; j < 32; j++)
+  __loop__(
+    /* A single iteration of this loop updates 8 coefficients 3 times each,
+     * meaning their bound jumps from NTT_BOUND1 to NTT_BOUND4. Other (as yet
+     * untouched) coefficients remain bounded by NTT_BOUND1. When this loop
+     * terminates with j == 32, ALL the coefficients have been updated
+     * exactly 3 times, so ALL are bounded by NTT_BOUND4, which establishes
+     * the post-condition */
+    invariant(0 <= j && j <= 32)
+    invariant(array_abs_bound(r,       0,   j - 1, NTT_BOUND4))
+    invariant(array_abs_bound(r,       j,      31, NTT_BOUND1))
+    invariant(array_abs_bound(r,      32,  j + 31, NTT_BOUND4))
+    invariant(array_abs_bound(r,  j + 32,      63, NTT_BOUND1))
+    invariant(array_abs_bound(r,      64,  j + 63, NTT_BOUND4))
+    invariant(array_abs_bound(r,  j + 64,      95, NTT_BOUND1))
+    invariant(array_abs_bound(r,      96,  j + 95, NTT_BOUND4))
+    invariant(array_abs_bound(r,  j + 96,     127, NTT_BOUND1))
+    invariant(array_abs_bound(r,     128, j + 127, NTT_BOUND4))
+    invariant(array_abs_bound(r, j + 128,     159, NTT_BOUND1))
+    invariant(array_abs_bound(r,     160, j + 159, NTT_BOUND4))
+    invariant(array_abs_bound(r, j + 160,     191, NTT_BOUND1))
+    invariant(array_abs_bound(r,     192, j + 191, NTT_BOUND4))
+    invariant(array_abs_bound(r, j + 192,     223, NTT_BOUND1))
+    invariant(array_abs_bound(r,     224, j + 223, NTT_BOUND4))
+    invariant(array_abs_bound(r, j + 224,     255, NTT_BOUND1)))
   {
     const int ci1 = j + 0;
     const int ci2 = j + 32;
@@ -79,64 +103,64 @@ __contract__(
     int16_t t1, t2;
 
     /* Layer 1 */
-    t1 = fqmul(z1, r[ci5]);
+    t1 = fqmul(r[ci5], z1);
     t2 = r[ci1];
     r[ci5] = t2 - t1;
     r[ci1] = t2 + t1;
 
-    t1 = fqmul(z1, r[ci7]);
+    t1 = fqmul(r[ci7], z1);
     t2 = r[ci3];
     r[ci7] = t2 - t1;
     r[ci3] = t2 + t1;
 
-    t1 = fqmul(z1, r[ci6]);
+    t1 = fqmul(r[ci6], z1);
     t2 = r[ci2];
     r[ci6] = t2 - t1;
     r[ci2] = t2 + t1;
 
-    t1 = fqmul(z1, r[ci8]);
+    t1 = fqmul(r[ci8], z1);
     t2 = r[ci4];
     r[ci8] = t2 - t1;
     r[ci4] = t2 + t1;
 
     /* Layer 2 */
-    t1 = fqmul(z2, r[ci3]);
+    t1 = fqmul(r[ci3], z2);
     t2 = r[ci1];
     r[ci3] = t2 - t1;
     r[ci1] = t2 + t1;
 
-    t1 = fqmul(z3, r[ci7]);
+    t1 = fqmul(r[ci7], z3);
     t2 = r[ci5];
     r[ci7] = t2 - t1;
     r[ci5] = t2 + t1;
 
-    t1 = fqmul(z2, r[ci4]);
+    t1 = fqmul(r[ci4], z2);
     t2 = r[ci2];
     r[ci4] = t2 - t1;
     r[ci2] = t2 + t1;
 
-    t1 = fqmul(z3, r[ci8]);
+    t1 = fqmul(r[ci8], z3);
     t2 = r[ci6];
     r[ci8] = t2 - t1;
     r[ci6] = t2 + t1;
 
     /* Layer 3 */
-    t1 = fqmul(z4, r[ci2]);
+    t1 = fqmul(r[ci2], z4);
     t2 = r[ci1];
     r[ci2] = t2 - t1;
     r[ci1] = t2 + t1;
 
-    t1 = fqmul(z5, r[ci4]);
+    t1 = fqmul(r[ci4], z5);
     t2 = r[ci3];
     r[ci4] = t2 - t1;
     r[ci3] = t2 + t1;
 
-    t1 = fqmul(z6, r[ci6]);
+    t1 = fqmul(r[ci6], z6);
     t2 = r[ci5];
     r[ci6] = t2 - t1;
     r[ci5] = t2 + t1;
 
-    t1 = fqmul(z7, r[ci8]);
+    t1 = fqmul(r[ci8], z7);
     t2 = r[ci7];
     r[ci8] = t2 - t1;
     r[ci7] = t2 + t1;
