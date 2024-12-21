@@ -50,7 +50,7 @@ const int16_t layer7_zetas[64] = {
     478,   -108, -308,  996,   991,   958,   -1460, 1522,  1628};
 
 
-STATIC_INLINE_TESTABLE void ntt_layer123(pc r)
+STATIC_NO_INLINE_TESTABLE void ntt_layer123(pc r)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
   requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND1))
@@ -230,7 +230,7 @@ __contract__(
 }
 
 
-STATIC_INLINE_TESTABLE void ntt_layer45(pc r)
+STATIC_NO_INLINE_TESTABLE void ntt_layer45(pc r)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
   requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND4))
@@ -282,7 +282,7 @@ __contract__(
   }
 }
 
-STATIC_INLINE_TESTABLE void ntt_layer6(pc r)
+STATIC_NO_INLINE_TESTABLE void ntt_layer6(pc r)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
   requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND6))
@@ -335,7 +335,7 @@ __contract__(
   r[ci3] = c1 - zc3;
 }
 
-STATIC_INLINE_TESTABLE void ntt_layer7(pc r)
+STATIC_NO_INLINE_TESTABLE void ntt_layer7(pc r)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
   requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND7))
