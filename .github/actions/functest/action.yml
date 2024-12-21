@@ -22,6 +22,9 @@ inputs:
   cflags:
     description: CFLAGS to pass to compilation
     default: ""
+  extraflags:
+    description: EXTRAFLAGS to pass to compilation
+    default: ""
   cross_prefix:
     description: Binary prefix for cross compilation
     default: ""
@@ -85,7 +88,7 @@ runs:
       - name: ${{ env.MODE }} ${{ inputs.opt }} tests (${{ env.FUNC }}, ${{ env.KAT }}, ${{ env.NISTKAT }})
         shell: ${{ env.SHELL }}
         run: |
-          ./scripts/tests all  --cross-prefix="${{ inputs.cross_prefix }}" --cflags="${{ inputs.cflags }}" --opt=${{ inputs.opt }} --${{ env.FUNC }} --${{ env.KAT }} --${{ env.NISTKAT }} --${{ env.ACVP }} -v
+          ./scripts/tests all  --cross-prefix="${{ inputs.cross_prefix }}" --cflags="${{ inputs.cflags }}" --extraflags="${{ inputs.extraflags }}" --opt=${{ inputs.opt }} --${{ env.FUNC }} --${{ env.KAT }} --${{ env.NISTKAT }} --${{ env.ACVP }} -v
       - name: Check namespacing ${{ env.MODE }} ${{ inputs.opt }} tests (${{ env.FUNC }}, ${{ env.KAT }}, ${{ env.NISTKAT }})
         shell: ${{ env.SHELL }}
         run: |

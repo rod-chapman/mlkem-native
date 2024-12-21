@@ -274,6 +274,7 @@ jobs:
           kat: false
           acvp: false
           nix-shell: "ci_gcc48"
+          extraflags: "-O1" # _FORTIFY_SOURCE requires compiling with optimization
       - name: native build+functest (gcc-4.9)
         if: ${{ matrix.target.runner != 'macos-latest' }}
         uses: ./.github/actions/multi-functest
@@ -285,6 +286,7 @@ jobs:
           kat: false
           acvp: false
           nix-shell: "ci_gcc49"
+          extraflags: "-O1" # _FORTIFY_SOURCE requires compiling with optimization
       - name: native build+functest (gcc-7)
         if: ${{ matrix.target.runner != 'macos-latest' }}
         uses: ./.github/actions/multi-functest
@@ -296,6 +298,7 @@ jobs:
           kat: false
           acvp: false
           nix-shell: "ci_gcc7"
+          extraflags: "-O1" # _FORTIFY_SOURCE requires compiling with optimization
       - name: native build+functest (gcc-11)
         uses: ./.github/actions/multi-functest
         with:
@@ -306,6 +309,7 @@ jobs:
           kat: false
           acvp: false
           nix-shell: "ci_gcc11"
+          extraflags: "-O1" # _FORTIFY_SOURCE requires compiling with optimization
       - name: native build+functest (gcc-14)
         uses: ./.github/actions/multi-functest
         with:
@@ -316,6 +320,7 @@ jobs:
           kat: false
           acvp: false
           nix-shell: "ci_gcc14"
+          extraflags: "-O1" # _FORTIFY_SOURCE requires compiling with optimization
       - name: native build+functest (clang-18)
         uses: ./.github/actions/multi-functest
         with:
@@ -326,6 +331,7 @@ jobs:
           kat: false
           acvp: false
           nix-shell: "ci_clang18"
+          extraflags: "-O1" # _FORTIFY_SOURCE requires compiling with optimization
   # The purpose of this job is to test non-default yet valid configurations
   config_variations:
     name: Non-standard configurations
@@ -471,6 +477,7 @@ jobs:
       acvptest: true
       lint: false
       verbose: true
+      extraflags: "-O0"
     secrets: inherit
   cbmc_k2:
     name: CBMC (ML-KEM-512)
