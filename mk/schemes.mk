@@ -2,10 +2,10 @@
 SOURCES += $(wildcard mlkem/*.c) $(wildcard mlkem/debug/*.c)
 ifeq ($(OPT),1)
 	SOURCES += $(wildcard mlkem/native/aarch64/src/*.[csS]) $(wildcard mlkem/native/x86_64/src/*.[csS])
-	CPPFLAGS += -DMLKEM_USE_NATIVE
+	EXTRAFLAGS += -DMLKEM_USE_NATIVE
 endif
 
-CPPFLAGS += -Imlkem -Imlkem/sys -Imlkem/native -Imlkem/native/aarch64 -Imlkem/native/x86_64
+EXTRAFLAGS += -Imlkem -Imlkem/sys -Imlkem/native -Imlkem/native/aarch64 -Imlkem/native/x86_64
 ALL_TESTS = test_mlkem acvp_mlkem bench_mlkem bench_components_mlkem gen_NISTKAT gen_KAT
 NON_NIST_TESTS = $(filter-out gen_NISTKAT,$(ALL_TESTS))
 
@@ -25,9 +25,9 @@ $(BUILD_DIR)/lib$(1).a: $(call MAKE_OBJS,$(BUILD_DIR)/$(1),$(SOURCES))
 $(BUILD_DIR)/libmlkem.a: $(BUILD_DIR)/lib$(1).a $(call MAKE_OBJS,$(BUILD_DIR)/$(1),$(SOURCES))
 endef
 
-$(BUILD_DIR)/libmlkem512.a: CPPFLAGS += -DMLKEM_K=2
-$(BUILD_DIR)/libmlkem768.a: CPPFLAGS += -DMLKEM_K=3
-$(BUILD_DIR)/libmlkem1024.a: CPPFLAGS += -DMLKEM_K=4
+$(BUILD_DIR)/libmlkem512.a: EXTRAFLAGS += -DMLKEM_K=2
+$(BUILD_DIR)/libmlkem768.a: EXTRAFLAGS += -DMLKEM_K=3
+$(BUILD_DIR)/libmlkem1024.a: EXTRAFLAGS += -DMLKEM_K=4
 
 # build libmlkem512.a libmlkem768.a libmlkem1024.a
 $(foreach scheme,mlkem512 mlkem768 mlkem1024, \
@@ -39,9 +39,9 @@ $(BUILD_DIR)/$(1)/bin/$(2)$(shell echo $(1) | tr -d -c 0-9): LDLIBS += -L$(BUILD
 $(BUILD_DIR)/$(1)/bin/$(2)$(shell echo $(1) | tr -d -c 0-9): $(BUILD_DIR)/$(1)/test/$(2).c.o $(BUILD_DIR)/lib$(1).a
 endef
 
-$(MLKEM512_DIR)/bin/%: CPPFLAGS += -DMLKEM_K=2
-$(MLKEM768_DIR)/bin/%: CPPFLAGS += -DMLKEM_K=3
-$(MLKEM1024_DIR)/bin/%: CPPFLAGS += -DMLKEM_K=4
+$(MLKEM512_DIR)/bin/%: EXTRAFLAGS += -DMLKEM_K=2
+$(MLKEM768_DIR)/bin/%: EXTRAFLAGS += -DMLKEM_K=3
+$(MLKEM1024_DIR)/bin/%: EXTRAFLAGS += -DMLKEM_K=4
 
 $(foreach scheme,mlkem512 mlkem768 mlkem1024, \
 	$(foreach test,$(ALL_TESTS), \
@@ -50,11 +50,11 @@ $(foreach scheme,mlkem512 mlkem768 mlkem1024, \
 )
 
 # nistkat tests require special RNG
-$(MLKEM512_DIR)/bin/gen_NISTKAT512: CPPFLAGS += -Itest/nistrng
+$(MLKEM512_DIR)/bin/gen_NISTKAT512: EXTRAFLAGS += -Itest/nistrng
 $(MLKEM512_DIR)/bin/gen_NISTKAT512: $(call MAKE_OBJS, $(MLKEM512_DIR), $(wildcard test/nistrng/*.c))
-$(MLKEM768_DIR)/bin/gen_NISTKAT768: CPPFLAGS += -Itest/nistrng
+$(MLKEM768_DIR)/bin/gen_NISTKAT768: EXTRAFLAGS += -Itest/nistrng
 $(MLKEM768_DIR)/bin/gen_NISTKAT768: $(call MAKE_OBJS, $(MLKEM768_DIR), $(wildcard test/nistrng/*.c))
-$(MLKEM1024_DIR)/bin/gen_NISTKAT1024: CPPFLAGS += -Itest/nistrng
+$(MLKEM1024_DIR)/bin/gen_NISTKAT1024: EXTRAFLAGS += -Itest/nistrng
 $(MLKEM1024_DIR)/bin/gen_NISTKAT1024: $(call MAKE_OBJS, $(MLKEM1024_DIR), $(wildcard test/nistrng/*.c))
 
 # All other tests use test-only RNG

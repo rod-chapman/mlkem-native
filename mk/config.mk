@@ -46,8 +46,7 @@ CFLAGS += \
 	-std=c99 \
 	-pedantic \
 	-MMD \
-	$(EXTRAFLAGS) \
-	$(CPPFLAGS)
+	$(EXTRAFLAGS)
 
 ##################
 # Some Variables #

@@ -1,3 +1,3 @@
 # SPDX-License-Identifier: Apache-2.0
-CPPFLAGS += -Itest/hal
+EXTRAFLAGS += -Itest/hal
 SOURCES += $(wildcard test/hal/*.c)
