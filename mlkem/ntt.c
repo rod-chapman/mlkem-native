@@ -398,6 +398,72 @@ void poly_ntt(poly *p)
 #define INVNTT_BOUND_REF (3 * MLKEM_Q / 4)
 STATIC_ASSERT(INVNTT_BOUND_REF <= INVNTT_BOUND, invntt_bound)
 
+
+/* NEW STUFF */
+
+#define CINV 1441
+
+STATIC_INLINE_TESTABLE void invntt_layer7_invert_inner(pc r, int zeta_index,
+                                                       int start)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(zeta_index >= 0 && zeta_index <= 63)
+  requires(start >= 0 && start <= 252)
+  requires(array_abs_bound(r, 0, start - 1, NTT_BOUND1))
+  requires(array_bound(r, start, start + 3, INT16_MIN, INT16_MAX))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, start + 3, NTT_BOUND1))
+  ensures(array_bound(r, start + 4, 255, INT16_MIN, INT16_MAX))
+/*   ensures(forall(int, k1, 0, (start - 1), (r[k1] == old(r[k1])))) */
+/*   ensures(array_abs_bound(r, start, start + 3, MLKEM_Q)) */
+/*   ensures(forall(int, k2, (start + 4), 255, (r[k2] == old(r[k2])))) */
+)
+{
+  const int32_t zeta = (int32_t)layer7_zetas[zeta_index];
+  const int ci0 = start;
+  const int ci1 = ci0 + 1;
+  const int ci2 = ci0 + 2;
+  const int ci3 = ci0 + 3;
+
+  /* Invert and reduce all coefficients here the first time they */
+  /* are read. This is efficient, and also means we can accept   */
+  /* any int16_t value for all coefficients as input.            */
+  const int16_t c0 = fqmul(r[ci0], CINV);
+  const int16_t c1 = fqmul(r[ci1], CINV);
+  const int16_t c2 = fqmul(r[ci2], CINV);
+  const int16_t c3 = fqmul(r[ci3], CINV);
+
+  /* Reduce all coefficients here to meet the precondition of Layer6 */
+  r[ci0] = barrett_reduce(c0 + c2);
+  r[ci2] = fqmul((c2 - c0), zeta);
+
+  r[ci1] = barrett_reduce(c1 + c3);
+  r[ci3] = fqmul((c3 - c1), zeta);
+}
+
+STATIC_NO_INLINE_TESTABLE void invntt_layer7_invert(pc r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, 255, NTT_BOUND1))
+)
+{
+  int i;
+  for (i = 0; i < 64; i++)
+  __loop__(
+    invariant(0 <= i && i <= 64)
+    invariant(array_abs_bound(r, 0, (i - 1) * 4 + 3, NTT_BOUND1))
+  )
+  {
+    invntt_layer7_invert_inner(r, 63 - i, i * 4);
+  }
+}
+
+
+/* END NEW STUFF */
+
+
+
 /* Compute one layer of inverse NTT */
 STATIC_TESTABLE
 void invntt_layer(int16_t *r, int len, int layer)
@@ -446,6 +512,9 @@ void poly_invntt_tomont(poly *p)
   int j, len, layer;
   const int16_t f = 1441;
   int16_t *r = p->coeffs;
+
+  invntt_layer7_invert(r);
+
 
   for (j = 0; j < MLKEM_N; j++)
   __loop__(
