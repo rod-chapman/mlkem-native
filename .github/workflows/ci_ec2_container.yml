@@ -147,9 +147,9 @@ jobs:
           sudo: ""
       - name: make quickcheck
         run: |
-          OPT=0 make quickcheck >/dev/null
+          OPT=0 make quickcheck
           make clean            >/dev/null
-          OPT=1 make quickcheck >/dev/null
+          OPT=1 make quickcheck
       - name: Functional Tests
         uses: ./.github/actions/multi-functest
         with:
