@@ -489,7 +489,7 @@ jobs:
           gh_token: ${{ secrets.AWS_GITHUB_TOKEN }}
   ec2_compatibilitytests:
     strategy:
-      max-parallel: 12
+      max-parallel: 8
       fail-fast: false
       matrix:
         container:
