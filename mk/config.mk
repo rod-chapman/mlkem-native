@@ -29,7 +29,7 @@ CC_AR  := $(CROSS_PREFIX)$(CC_AR)
 #################
 # Common config #
 #################
-CFLAGS += \
+CFLAGS := \
 	$(ARCH_FLAGS) \
 	-Wall \
 	-Wextra \
@@ -46,7 +46,7 @@ CFLAGS += \
 	-std=c99 \
 	-pedantic \
 	-MMD \
-	$(EXTRAFLAGS)
+	$(CFLAGS)
 
 ##################
 # Some Variables #
