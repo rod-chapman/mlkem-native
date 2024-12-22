@@ -513,9 +513,6 @@ void poly_invntt_tomont(poly *p)
   const int16_t f = 1441;
   int16_t *r = p->coeffs;
 
-  invntt_layer7_invert(r);
-
-
   for (j = 0; j < MLKEM_N; j++)
   __loop__(
     invariant(0 <= j && j <= MLKEM_N)
