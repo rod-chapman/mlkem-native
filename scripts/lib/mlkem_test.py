@@ -132,8 +132,7 @@ class Base:
     def run_scheme(
         self,
         scheme,
-        actual_proc=None,
-        expect_proc=None,
+        check_proc=None,
         cmd_prefix=None,
         extra_args=None,
     ):
@@ -142,11 +141,8 @@ class Base:
         Arguments:
 
         - scheme: Scheme to test
-        - actual_proc: Callable to process the raw byte-output
+        - check_proc: Callable to process and check the raw byte-output
             of the test run with.
-        - expected_proc: Checker function. Callable receiving test type and
-            processed output, and returns success/failure and potentially
-            error string
         - cmd_prefix: Command prefix; array of strings, or None
         - extra_args: Extra arguments; array of strings, or None
         """
@@ -179,9 +175,8 @@ class Base:
             log.error(
                 f"Running '{cmd}' failed: {p.returncode} {p.stderr.decode()}",
             )
-        elif actual_proc is not None and expect_proc is not None:
-            actual = actual_proc(p.stdout)
-            result, err = expect_proc(scheme, actual)
+        elif check_proc is not None:
+            result, err = check_proc(scheme, p.stdout)
             if result:
                 log.error(f"{err}")
             else:
@@ -219,8 +214,7 @@ class Test_Implementations:
         self,
         opt,
         scheme,
-        actual_proc=None,
-        expect_proc=None,
+        check_proc=None,
         cmd_prefix=None,
         extra_args=None,
     ):
@@ -228,11 +222,8 @@ class Test_Implementations:
 
         - opt: Whether build should include native backends or not
         - scheme: Scheme to run
-        - actual_proc: Callable to process the raw byte-output
-            of the test run with.
-        - expected_proc: Checker function. Callable receiving test type and
-            processed output, and returns success/failure and potentially
-            error string
+        - check_proc: Callable to process and check the
+            raw byte-output of the test run with.
         - cmd_prefix: Command prefix; array of strings, or None
         - extra_args: Extra arguments; array of strings, or None
         """
@@ -247,22 +238,17 @@ class Test_Implementations:
         results = {}
         results[k] = {}
         results[k][scheme] = self.ts[k].run_scheme(
-            scheme, actual_proc, expect_proc, cmd_prefix, extra_args
+            scheme, check_proc, cmd_prefix, extra_args
         )
 
         return results
 
-    def run_schemes(
-        self, opt, actual_proc=None, expect_proc=None, cmd_prefix=None, extra_args=None
-    ):
+    def run_schemes(self, opt, check_proc=None, cmd_prefix=None, extra_args=None):
         """Arguments:
 
         - opt: Whether native backends should be enabled
-        - actual_proc: Functionto process the raw byte-output
-                       of the test run with.
-        - expected_proc: Checker function. Receives test type and
-                         processed output, and returns success/failure
-                         and potentially error string
+        - check_proc: Functionto process and check the raw byte-output
+                      of the test run with.
         - cmd_prefix: Command prefix; array of strings
         - extra_args: Extra arguments; array of strings
         """
@@ -283,8 +269,7 @@ class Test_Implementations:
         for scheme in SCHEME:
             result = self.ts[k].run_scheme(
                 scheme,
-                actual_proc,
-                expect_proc,
+                check_proc,
                 cmd_prefix,
                 extra_args,
             )
@@ -297,7 +282,8 @@ class Test_Implementations:
         if gh_env is not None:
             print(f"::endgroup::")
 
-        if actual_proc is not None and expect_proc is not None:
+        ## TODO What is happening here?
+        if check_proc is not None:
             return reduce(
                 lambda acc, c: acc or c,
                 [r for rs in results.values() for r in rs.values()],
@@ -373,8 +359,10 @@ class Tests:
     def _run_func(self, opt):
         """Underlying function for functional test"""
 
-        def expect(scheme, actual):
+        def expect(scheme, raw):
             """Checks whether the hashed output of the scheme matches the META.yml"""
+
+            actual = str(raw, encoding="utf-8")
 
             sk_bytes = parse_meta(scheme, "length-secret-key")
             pk_bytes = parse_meta(scheme, "length-public-key")
@@ -393,8 +381,7 @@ class Tests:
 
         return self._func.run_schemes(
             opt,
-            actual_proc=lambda result: str(result, encoding="utf-8"),
-            expect_proc=expect,
+            check_proc=expect,
             cmd_prefix=self.cmd_prefix,
         )
 
@@ -418,8 +405,10 @@ class Tests:
             exit(1)
 
     def _run_nistkat(self, opt):
-        def expect_proc(scheme, actual):
+        def check_proc(scheme, raw):
             """Checks whether the hashed output of the scheme matches the META.yml"""
+
+            actual = sha256sum(raw)
             expect = parse_meta(scheme, "nistkat-sha256")
             fail = expect != actual
 
@@ -430,8 +419,7 @@ class Tests:
 
         return self._nistkat.run_schemes(
             opt,
-            actual_proc=sha256sum,
-            expect_proc=expect_proc,
+            check_proc=check_proc,
             cmd_prefix=self.cmd_prefix,
         )
 
@@ -454,8 +442,9 @@ class Tests:
             exit(1)
 
     def _run_kat(self, opt):
-        def expect_proc(scheme, actual):
+        def check_proc(scheme, raw):
             """Checks whether the hashed output of the scheme matches the META.yml"""
+            actual = sha256sum(raw)
             expect = parse_meta(scheme, "kat-sha256")
             fail = expect != actual
 
@@ -466,8 +455,7 @@ class Tests:
 
         return self._kat.run_schemes(
             opt,
-            actual_proc=sha256sum,
-            expect_proc=expect_proc,
+            check_proc=check_proc,
             cmd_prefix=self.cmd_prefix,
         )
 
@@ -500,11 +488,9 @@ class Tests:
         with open(acvp_encapDecap_json, "r") as f:
             acvp_encapDecap_data = json.load(f)
 
-        def actual_proc(bs: bytes):
-            return bs.decode("utf-8")
-
-        def _expect_proc(tc, scheme, actual):
+        def _check_proc(tc, scheme, raw):
             """Checks whether the ACVP result is as expected"""
+            actual = raw.decode("utf-8")
             fail = False
             err = ""
             for l in actual.splitlines():
@@ -560,8 +546,7 @@ class Tests:
                     opt,
                     scheme,
                     extra_args=extra_args,
-                    actual_proc=actual_proc,
-                    expect_proc=partial(_expect_proc, tc),
+                    check_proc=partial(_check_proc, tc),
                     cmd_prefix=self.cmd_prefix,
                 )
                 for k, r in rs.items():
@@ -600,8 +585,7 @@ class Tests:
                     opt,
                     scheme,
                     extra_args=extra_args,
-                    actual_proc=actual_proc,
-                    expect_proc=partial(_expect_proc, tc),
+                    check_proc=partial(_check_proc, tc),
                     cmd_prefix=self.cmd_prefix,
                 )
                 for k, r in rs.items():
