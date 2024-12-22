@@ -13,6 +13,7 @@
 
 
 #define NTT_BOUND1 (MLKEM_Q - 1)
+#define NTT_BOUND2 (2 * MLKEM_Q - 1)
 #define NTT_BOUND4 (4 * MLKEM_Q - 1)
 #define NTT_BOUND6 (6 * MLKEM_Q - 1)
 #define NTT_BOUND7 (7 * MLKEM_Q - 1)
@@ -414,9 +415,6 @@ __contract__(
   assigns(memory_slice(r, sizeof(pc)))
   ensures(array_abs_bound(r, 0, start + 3, NTT_BOUND1))
   ensures(array_bound(r, start + 4, 255, INT16_MIN, INT16_MAX))
-/*   ensures(forall(int, k1, 0, (start - 1), (r[k1] == old(r[k1])))) */
-/*   ensures(array_abs_bound(r, start, start + 3, MLKEM_Q)) */
-/*   ensures(forall(int, k2, (start + 4), 255, (r[k2] == old(r[k2])))) */
 )
 {
   const int32_t zeta = (int32_t)layer7_zetas[zeta_index];
@@ -456,6 +454,72 @@ __contract__(
   )
   {
     invntt_layer7_invert_inner(r, 63 - i, i * 4);
+  }
+}
+
+STATIC_INLINE_TESTABLE void invntt_layer6_inner(pc r, int zeta_index, int start)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(zeta_index >= 0 && zeta_index <= 31)
+  requires(start >= 0 && start <= 248)
+  requires(start % 8 == 0)
+  requires(array_abs_bound(r, 0,     start - 1, NTT_BOUND2))
+  requires(array_abs_bound(r, start, 255, NTT_BOUND1))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0,         start + 7, NTT_BOUND2))
+  ensures(array_abs_bound(r, start + 8, 255,       NTT_BOUND1))
+)
+{
+  const int32_t zeta = (int32_t)layer6_zetas[zeta_index];
+  const int ci0 = start;
+  const int ci1 = ci0 + 1;
+  const int ci2 = ci0 + 2;
+  const int ci3 = ci0 + 3;
+  const int ci4 = ci0 + 4;
+  const int ci5 = ci0 + 5;
+  const int ci6 = ci0 + 6;
+  const int ci7 = ci0 + 7;
+  const int16_t c0 = r[ci0];
+  const int16_t c1 = r[ci1];
+  const int16_t c2 = r[ci2];
+  const int16_t c3 = r[ci3];
+  const int16_t c4 = r[ci4];
+  const int16_t c5 = r[ci5];
+  const int16_t c6 = r[ci6];
+  const int16_t c7 = r[ci7];
+
+  /* Defer reduction of coefficients 0, 1, 2, and 3 here so they */
+  /* are bounded to NTT_BOUND2 after Layer6                      */
+  r[ci0] = c0 + c4;
+  r[ci4] = fqmul((c4 - c0), zeta);
+
+  r[ci1] = c1 + c5;
+  r[ci5] = fqmul((c5 - c1), zeta);
+
+  r[ci2] = c2 + c6;
+  r[ci6] = fqmul((c6 - c2), zeta);
+
+  r[ci3] = c3 + c7;
+  r[ci7] = fqmul((c7 - c3), zeta);
+}
+
+STATIC_NO_INLINE_TESTABLE void invntt_layer6(pc r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(array_abs_bound(r, 0, 255, NTT_BOUND1))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, 255, NTT_BOUND2))
+)
+{
+  int i;
+  for (i = 0; i < 32; i++)
+  __loop__(
+    invariant(0 <= i && i <= 32)
+    invariant(array_abs_bound(r, 0,     i * 8 - 1, NTT_BOUND2))
+    invariant(array_abs_bound(r, i * 8, 255,       NTT_BOUND1))
+  )
+  {
+    invntt_layer6_inner(r, 31 - i, i * 8);
   }
 }
 
