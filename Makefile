@@ -15,7 +15,7 @@ quickcheck: checkall
 buildall: mlkem nistkat kat acvp
 	$(Q)echo "  Everything builds fine!"
 
-checkall: buildall check_kat check_nistkat check_func
+checkall: buildall check_kat check_nistkat check_func check_acvp
 	$(Q)echo "  Everything checks fine!"
 
 check_kat: buildall
@@ -32,6 +32,9 @@ check_func: buildall
 	$(MLKEM512_DIR)/bin/test_mlkem512
 	$(MLKEM768_DIR)/bin/test_mlkem768
 	$(MLKEM1024_DIR)/bin/test_mlkem1024
+
+check_acvp: buildall
+	python3 ./test/acvp_client.py
 
 lib: $(BUILD_DIR)/libmlkem.a
 
