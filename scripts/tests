@@ -61,13 +61,6 @@ _shared_options = [
         callback=__callback("cflags"),
     ),
     click.option(
-        "--extraflags",
-        expose_value=False,
-        nargs=1,
-        help="Extra cflags overwriting default flags (e.g. '-O0')",
-        callback=__callback("extraflags"),
-    ),
-    click.option(
         "--arch-flags",
         expose_value=False,
         nargs=1,

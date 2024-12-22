@@ -22,9 +22,6 @@ inputs:
   cflags:
     description: CFLAGS to pass to compilation
     default: ""
-  extraflags:
-    description: EXTRAFLAGS to pass to compilation
-    default: ""
   compile_mode:
     description: all | native | cross-x86_64 | cross-aarch64 | cross-riscv64
     default: "native"
@@ -56,7 +53,6 @@ runs:
           gh_token: ${{ inputs.gh_token }}
           custom_shell: ${{ inputs.custom_shell }}
           cflags: ${{ inputs.cflags }}
-          extraflags: ${{ inputs.extraflags }}
           opt: ${{ inputs.opt }}
           func: ${{ inputs.func }}
           kat: ${{ inputs.kat }}
@@ -72,7 +68,6 @@ runs:
           gh_token: ${{ inputs.gh_token }}
           custom_shell: ${{ inputs.custom_shell }}
           cflags: ${{ inputs.cflags }}
-          extraflags: ${{ inputs.extraflags }}
           cross_prefix: x86_64-unknown-linux-gnu-
           opt: ${{ inputs.opt }}
           func: ${{ inputs.func }}
@@ -89,7 +84,6 @@ runs:
           gh_token: ${{ inputs.gh_token }}
           custom_shell: ${{ inputs.custom_shell }}
           cflags: ${{ inputs.cflags }}
-          extraflags: ${{ inputs.extraflags }}
           cross_prefix: aarch64-unknown-linux-gnu-
           opt: ${{ inputs.opt }}
           func: ${{ inputs.func }}
@@ -106,7 +100,6 @@ runs:
           gh_token: ${{ inputs.gh_token }}
           custom_shell: ${{ inputs.custom_shell }}
           cflags: "${{ inputs.cflags }} -static"
-          extraflags: ${{ inputs.extraflags }}
           cross_prefix: aarch64_be-none-linux-gnu-
           opt: ${{ inputs.opt }}
           func: ${{ inputs.func }}
@@ -123,7 +116,6 @@ runs:
           gh_token: ${{ inputs.gh_token }}
           custom_shell: ${{ inputs.custom_shell }}
           cflags: ${{ inputs.cflags }}
-          extraflags: ${{ inputs.extraflags }}
           cross_prefix: riscv64-unknown-linux-gnu-
           opt: ${{ inputs.opt }}
           func: ${{ inputs.func }}

@@ -26,10 +26,6 @@ on:
         type: string
         description: Custom CFLAGS for compilation
         default: ""
-      extraflags:
-        type: string
-        description: Custom EXTRAFLAGS for compilation
-        default: ""
       verbose:
         description: Determine for the log verbosity
         type: boolean
@@ -160,7 +156,6 @@ jobs:
           nix-shell: ""
           gh_token: ${{ secrets.AWS_GITHUB_TOKEN }}
           cflags: ${{ inputs.cflags }}
-          extraflags: ${{ inputs.extraflags }}
           compile_mode: ${{ inputs.compile_mode }}
           opt: ${{ inputs.opt }}
           func: ${{ inputs.functest }}
