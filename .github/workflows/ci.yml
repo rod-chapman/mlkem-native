@@ -57,9 +57,9 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: make quickcheck
         run: |
-          OPT=0 make quickcheck >/dev/null
-          make clean            >/dev/null
-          OPT=1 make quickcheck >/dev/null
+          OPT=0 make quickcheck
+          make clean >/dev/null
+          OPT=1 make quickcheck
       - uses: ./.github/actions/setup-apt
       - name: tests func
         run: |
@@ -90,9 +90,9 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: make quickcheck
         run: |
-          OPT=0 CPPFLAGS=-std=c90 make quickcheck >/dev/null
-          make clean            >/dev/null
-          OPT=1 CPPFLAGS=-std=c90 make quickcheck >/dev/null
+          OPT=0 CPPFLAGS=-std=c90 make quickcheck
+          make clean >/dev/null
+          OPT=1 CPPFLAGS=-std=c90 make quickcheck
       - uses: ./.github/actions/setup-apt
       - name: tests func
         run: |
@@ -479,9 +479,9 @@ jobs:
           sudo: ""
       - name: make quickcheck
         run: |
-          OPT=0 make quickcheck >/dev/null
-          make clean            >/dev/null
-          OPT=1 make quickcheck >/dev/null
+          OPT=0 make quickcheck
+          make clean >/dev/null
+          OPT=1 make quickcheck
       - name: Functional Tests
         uses: ./.github/actions/multi-functest
         with:
