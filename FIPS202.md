@@ -20,3 +20,8 @@ functionalities specified therein:
 See [`mlkem/fips202/fips202.h`](mlkem/fips202/fips202.h) and [`mlkem/fips202/fips202x4.h`](mlkem/fips202/fips202x4.h) for more details. Note that the structure
 definitions may differ from those shipped with mlkem-native: In particular, you may fall back to an incremental hashing
 implementation which tracks the current offset in its state.
+
+## Example
+
+See [`examples/bring_your_own_fips202/`](examples/bring_your_own_fips202/) for an example how to use a custom FIPS-202
+implementation.
