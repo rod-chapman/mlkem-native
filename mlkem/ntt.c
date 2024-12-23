@@ -21,6 +21,14 @@
 
 typedef int16_t pc[MLKEM_N];
 
+const int16_t l1zeta1 = -758;
+const int16_t l2zeta2 = -359;
+const int16_t l2zeta3 = -1517;
+const int16_t l3zeta4 = 1493;
+const int16_t l3zeta5 = 1422;
+const int16_t l3zeta6 = 287;
+const int16_t l3zeta7 = 202;
+
 /* Zeta values for layer 4, originally occupying */
 /* positions 8 .. 15 in the full Zeta table.     */
 const int16_t layer4_zetas_table[8] = {-171, 622,   1577,  182,
@@ -43,7 +51,6 @@ const int16_t layer6_zetas[32] = {
     -247, -951,  -398,  961,  -1508, -725, 448,  -1065, 677, -1275};
 
 const int16_t layer7_zetas[64] = {
-    /* Layer 7 - index 64 .. 127 */
     -1103, 430,  555,   843,   -1251, 871,   1550,  105,   422,   587,  177,
     -235,  -291, -460,  1574,  1653,  -246,  778,   1159,  -147,  -777, 1483,
     -602,  1119, -1590, 644,   -872,  349,   418,   329,   -156,  -75,  817,
@@ -59,14 +66,6 @@ __contract__(
   assigns(memory_slice(r, sizeof(pc)))
   ensures(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND4)))
 {
-  const int32_t z1 = -758;
-  const int32_t z2 = -359;
-  const int32_t z3 = -1517;
-  const int32_t z4 = 1493;
-  const int32_t z5 = 1422;
-  const int32_t z6 = 287;
-  const int32_t z7 = 202;
-
   int j;
   for (j = 0; j < 32; j++)
   __loop__(
@@ -105,64 +104,64 @@ __contract__(
     int16_t t1, t2;
 
     /* Layer 1 */
-    t1 = fqmul(r[ci5], z1);
+    t1 = fqmul(r[ci5], l1zeta1);
     t2 = r[ci1];
     r[ci5] = t2 - t1;
     r[ci1] = t2 + t1;
 
-    t1 = fqmul(r[ci7], z1);
+    t1 = fqmul(r[ci7], l1zeta1);
     t2 = r[ci3];
     r[ci7] = t2 - t1;
     r[ci3] = t2 + t1;
 
-    t1 = fqmul(r[ci6], z1);
+    t1 = fqmul(r[ci6], l1zeta1);
     t2 = r[ci2];
     r[ci6] = t2 - t1;
     r[ci2] = t2 + t1;
 
-    t1 = fqmul(r[ci8], z1);
+    t1 = fqmul(r[ci8], l1zeta1);
     t2 = r[ci4];
     r[ci8] = t2 - t1;
     r[ci4] = t2 + t1;
 
     /* Layer 2 */
-    t1 = fqmul(r[ci3], z2);
+    t1 = fqmul(r[ci3], l2zeta2);
     t2 = r[ci1];
     r[ci3] = t2 - t1;
     r[ci1] = t2 + t1;
 
-    t1 = fqmul(r[ci7], z3);
+    t1 = fqmul(r[ci7], l2zeta3);
     t2 = r[ci5];
     r[ci7] = t2 - t1;
     r[ci5] = t2 + t1;
 
-    t1 = fqmul(r[ci4], z2);
+    t1 = fqmul(r[ci4], l2zeta2);
     t2 = r[ci2];
     r[ci4] = t2 - t1;
     r[ci2] = t2 + t1;
 
-    t1 = fqmul(r[ci8], z3);
+    t1 = fqmul(r[ci8], l2zeta3);
     t2 = r[ci6];
     r[ci8] = t2 - t1;
     r[ci6] = t2 + t1;
 
     /* Layer 3 */
-    t1 = fqmul(r[ci2], z4);
+    t1 = fqmul(r[ci2], l3zeta4);
     t2 = r[ci1];
     r[ci2] = t2 - t1;
     r[ci1] = t2 + t1;
 
-    t1 = fqmul(r[ci4], z5);
+    t1 = fqmul(r[ci4], l3zeta5);
     t2 = r[ci3];
     r[ci4] = t2 - t1;
     r[ci3] = t2 + t1;
 
-    t1 = fqmul(r[ci6], z6);
+    t1 = fqmul(r[ci6], l3zeta6);
     t2 = r[ci5];
     r[ci6] = t2 - t1;
     r[ci5] = t2 + t1;
 
-    t1 = fqmul(r[ci8], z7);
+    t1 = fqmul(r[ci8], l3zeta7);
     t2 = r[ci7];
     r[ci8] = t2 - t1;
     r[ci7] = t2 + t1;
