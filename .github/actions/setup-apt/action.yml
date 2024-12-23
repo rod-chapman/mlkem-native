@@ -22,17 +22,9 @@ runs:
     - name: Install base packages
       shell: bash
       run: |
-        ${{ inputs.sudo }} apt-get install python3-venv python3-pip make -y
+        ${{ inputs.sudo }} apt-get install make gcc python3 -y
     - name: Install additional packages
       if: ${{ inputs.packages != ''}}
       shell: bash
       run: |
         ${{ inputs.sudo }} apt-get install ${{ inputs.packages }} -y
-    - name: Setup Python venv
-      shell: bash
-      run: |
-        python3 -m venv venv
-        source venv/bin/activate
-        python3 -m pip install -r requirements.txt
-        deactivate
-        echo "$(pwd)/venv/bin/" >> "$GITHUB_PATH"
