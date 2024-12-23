@@ -17,7 +17,7 @@
  *   - include the types needed to declare function arguments
  */
 #include <ntt.h>
-void ntt_layer45_slice(int16_t *r, int zeta_subtree_index, int start);
+void ntt_layer45_inner(int16_t *r, int zeta_subtree_index, int start);
 
 /**
  * @brief Starting point for formal analysis
@@ -28,5 +28,5 @@ void harness(void)
   int16_t *a;
   int zi;
   int start;
-  ntt_layer45_slice(a, zi, start);
+  ntt_layer45_inner(a, zi, start);
 }
