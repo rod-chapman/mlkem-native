@@ -398,11 +398,6 @@ void poly_ntt(poly *p)
 STATIC_ASSERT(INVNTT_BOUND_REF <= INVNTT_BOUND, invntt_bound)
 
 
-/* NEW STUFF */
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-
 /*  MONT_F = mont^2/128 = 1441.                                */
 /*  Used to invert and reduce coefficients in the Inverse NTT. */
 #define MONT_F 1441
@@ -730,90 +725,10 @@ void poly_invntt_tomont(poly *p)
   POLY_BOUND_MSG(p, INVNTT_BOUND_REF, "ref intt output");
 }
 
-#pragma GCC diagnostic pop
-
-/* END NEW STUFF */
-
-
-
-/* Compute one layer of inverse NTT */
-STATIC_TESTABLE
-void invntt_layer(int16_t *r, int len, int layer)
-__contract__(
-  requires(memory_no_alias(r, sizeof(int16_t) * MLKEM_N))
-  requires(2 <= len && len <= 128 && 1 <= layer && layer <= 7)
-  requires(len == (1 << (8 - layer)))
-  requires(array_abs_bound(r, 0, MLKEM_N - 1, MLKEM_Q))
-  assigns(memory_slice(r, sizeof(int16_t) * MLKEM_N))
-  ensures(array_abs_bound(r, 0, MLKEM_N - 1, MLKEM_Q)))
-{
-  int start, k;
-  /* `layer` is a ghost variable used only in the specification */
-  ((void)layer);
-  k = MLKEM_N / len - 1;
-  for (start = 0; start < MLKEM_N; start += 2 * len)
-  __loop__(
-    invariant(array_abs_bound(r, 0, MLKEM_N - 1, MLKEM_Q))
-    invariant(0 <= start && start <= MLKEM_N && 0 <= k && k <= 127)
-    /* Normalised form of k == MLKEM_N / len - 1 - start / (2 * len) */
-    invariant(2 * len * k + start == 2 * MLKEM_N - 2 * len))
-  {
-    int j;
-    int16_t zeta = zetas[k--];
-    for (j = start; j < start + len; j++)
-    __loop__(
-      invariant(start <= j && j <= start + len)
-      invariant(0 <= start && start <= MLKEM_N && 0 <= k && k <= 127)
-      invariant(array_abs_bound(r, 0, MLKEM_N - 1, MLKEM_Q)))
-    {
-      int16_t t = r[j];
-      r[j] = barrett_reduce(t + r[j + len]);
-      r[j + len] = r[j + len] - t;
-      r[j + len] = fqmul(r[j + len], zeta);
-    }
-  }
-}
-
-void poly_invntt_tomont_ref(poly *p)
-{
-  /*
-   * Scale input polynomial to account for Montgomery factor
-   * and NTT twist. This also brings coefficients down to
-   * absolute value < MLKEM_Q.
-   */
-  int j, len, layer;
-  const int16_t f = 1441;
-  int16_t *r = p->coeffs;
-
-  for (j = 0; j < MLKEM_N; j++)
-  __loop__(
-    invariant(0 <= j && j <= MLKEM_N)
-    invariant(array_abs_bound(r, 0, j - 1, MLKEM_Q)))
-  {
-    r[j] = fqmul(r[j], f);
-  }
-
-  /* Run the invNTT layers */
-  for (len = 2, layer = 7; len <= 128; len <<= 1, layer--)
-  __loop__(
-    invariant(2 <= len && len <= 256 && 0 <= layer && layer <= 7 && len == (1 << (8 - layer)))
-    invariant(array_abs_bound(r, 0, MLKEM_N - 1, MLKEM_Q)))
-  {
-    invntt_layer(p->coeffs, len, layer);
-  }
-
-  POLY_BOUND_MSG(p, INVNTT_BOUND_REF, "ref intt output");
-}
 #else  /* MLKEM_USE_NATIVE_INTT */
 
 /* Check that bound for native invNTT implies contractual bound */
 STATIC_ASSERT(INVNTT_BOUND_NATIVE <= INVNTT_BOUND, invntt_bound)
-
-void poly_invntt_tomont_ref(poly *p)
-{
-  intt_native(p);
-  POLY_BOUND_MSG(p, INVNTT_BOUND_NATIVE, "native intt output");
-}
 
 void poly_invntt_tomont(poly *p)
 {
