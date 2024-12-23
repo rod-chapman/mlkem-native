@@ -615,7 +615,120 @@ __contract__(
   invntt_layer54_inner(r, 0, 224);
 }
 
+STATIC_NO_INLINE_TESTABLE void invntt_layer321(pc r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND1))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND8)))
+{
+  int j;
+  for (j = 0; j < 32; j++)
+  __loop__(
+    invariant(0 <= j && j <= 32)
+    invariant(array_abs_bound(r,       0,   j - 1, NTT_BOUND8))
+    invariant(array_abs_bound(r,       j,      31, NTT_BOUND1))
+    invariant(array_abs_bound(r,      32,  j + 31, NTT_BOUND4))
+    invariant(array_abs_bound(r,  j + 32,      63, NTT_BOUND1))
+    invariant(array_abs_bound(r,      64,  j + 63, NTT_BOUND2))
+    invariant(array_abs_bound(r,  j + 64,      95, NTT_BOUND1))
+    invariant(array_abs_bound(r,      96,  j + 95, NTT_BOUND2))
+    invariant(array_abs_bound(r,  j + 96,     127, NTT_BOUND1))
+    invariant(array_abs_bound(r,     128,     255, NTT_BOUND1)))
+  {
+    const int ci0 = j + 0;
+    const int ci32 = j + 32;
+    const int ci64 = j + 64;
+    const int ci96 = j + 96;
+    const int ci128 = j + 128;
+    const int ci160 = j + 160;
+    const int ci192 = j + 192;
+    const int ci224 = j + 224;
 
+    /* Layer 3 */
+    {
+      const int16_t c0 = r[ci0];
+      const int16_t c32 = r[ci32];
+      const int16_t c64 = r[ci64];
+      const int16_t c96 = r[ci96];
+      const int16_t c128 = r[ci128];
+      const int16_t c160 = r[ci160];
+      const int16_t c192 = r[ci192];
+      const int16_t c224 = r[ci224];
+
+      r[ci0] = c0 + c32;
+      r[ci32] = fqmul(c32 - c0, l3zeta7);
+
+      r[ci64] = c64 + c96;
+      r[ci96] = fqmul(c96 - c64, l3zeta6);
+
+      r[ci128] = c128 + c160;
+      r[ci160] = fqmul(c160 - c128, l3zeta5);
+
+      r[ci192] = c192 + c224;
+      r[ci224] = fqmul(c224 - c192, l3zeta4);
+    }
+
+    /* Layer 2 */
+    {
+      const int16_t c0 = r[ci0];
+      const int16_t c32 = r[ci32];
+      const int16_t c64 = r[ci64];
+      const int16_t c96 = r[ci96];
+      const int16_t c128 = r[ci128];
+      const int16_t c160 = r[ci160];
+      const int16_t c192 = r[ci192];
+      const int16_t c224 = r[ci224];
+
+      r[ci0] = c0 + c64;
+      r[ci64] = fqmul(c64 - c0, l2zeta3);
+
+      r[ci32] = c32 + c96;
+      r[ci96] = fqmul(c96 - c32, l2zeta3);
+
+      r[ci128] = c128 + c192;
+      r[ci192] = fqmul(c192 - c128, l2zeta2);
+
+      r[ci160] = c160 + c224;
+      r[ci224] = fqmul(c224 - c160, l2zeta2);
+    }
+
+    /* Layer 1 */
+    {
+      const int16_t c0 = r[ci0];
+      const int16_t c32 = r[ci32];
+      const int16_t c64 = r[ci64];
+      const int16_t c96 = r[ci96];
+      const int16_t c128 = r[ci128];
+      const int16_t c160 = r[ci160];
+      const int16_t c192 = r[ci192];
+      const int16_t c224 = r[ci224];
+
+      r[ci0] = c0 + c128;
+      r[ci128] = fqmul(c128 - c0, l1zeta1);
+
+      r[ci32] = c32 + c160;
+      r[ci160] = fqmul(c160 - c32, l1zeta1);
+
+      r[ci64] = c64 + c192;
+      r[ci192] = fqmul(c192 - c64, l1zeta1);
+
+      r[ci96] = c96 + c224;
+      r[ci224] = fqmul(c224 - c96, l1zeta1);
+    }
+  }
+}
+
+void poly_invntt_tomont(poly *p)
+{
+  int16_t *r = p->coeffs;
+  invntt_layer7_invert(r);
+  invntt_layer6(r);
+  invntt_layer54(r);
+  invntt_layer321(r);
+
+  POLY_BOUND_MSG(p, INVNTT_BOUND_REF, "ref intt output");
+}
 
 #pragma GCC diagnostic pop
 
@@ -661,7 +774,7 @@ __contract__(
   }
 }
 
-void poly_invntt_tomont(poly *p)
+void poly_invntt_tomont_ref(poly *p)
 {
   /*
    * Scale input polynomial to account for Montgomery factor
@@ -695,6 +808,12 @@ void poly_invntt_tomont(poly *p)
 
 /* Check that bound for native invNTT implies contractual bound */
 STATIC_ASSERT(INVNTT_BOUND_NATIVE <= INVNTT_BOUND, invntt_bound)
+
+void poly_invntt_tomont_ref(poly *p)
+{
+  intt_native(p);
+  POLY_BOUND_MSG(p, INVNTT_BOUND_NATIVE, "native intt output");
+}
 
 void poly_invntt_tomont(poly *p)
 {

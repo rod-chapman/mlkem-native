@@ -57,6 +57,13 @@ __contract__(
  *
  * Arguments:   - uint16_t *a: pointer to in/output polynomial
  **************************************************/
+void poly_invntt_tomont_ref(poly *r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(poly)))
+  assigns(memory_slice(r, sizeof(poly)))
+  ensures(array_abs_bound(r->coeffs, 0, MLKEM_N - 1, INVNTT_BOUND - 1))
+);
+
 void poly_invntt_tomont(poly *r)
 __contract__(
   requires(memory_no_alias(r, sizeof(poly)))
