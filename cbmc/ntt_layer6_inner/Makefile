@@ -3,11 +3,11 @@
 include ../Makefile_params.common
 
 HARNESS_ENTRY = harness
-HARNESS_FILE = ntt_layer6_slice_harness
+HARNESS_FILE = ntt_layer6_inner_harness
 
 # This should be a unique identifier for this proof, and will appear on the
 # Litani dashboard. It can be human-readable and contain spaces if you wish.
-PROOF_UID = ntt_layer6_slice
+PROOF_UID = ntt_layer6_inner
 
 DEFINES +=
 INCLUDES +=
@@ -18,7 +18,7 @@ UNWINDSET +=
 PROOF_SOURCES += $(PROOFDIR)/$(HARNESS_FILE).c
 PROJECT_SOURCES += $(SRCDIR)/mlkem/ntt.c
 
-CHECK_FUNCTION_CONTRACTS=ntt_layer6_slice
+CHECK_FUNCTION_CONTRACTS=ntt_layer6_inner
 USE_FUNCTION_CONTRACTS=fqmul
 APPLY_LOOP_CONTRACTS=on
 USE_DYNAMIC_FRAMES=1
@@ -27,7 +27,7 @@ USE_DYNAMIC_FRAMES=1
 EXTERNAL_SAT_SOLVER=
 CBMCFLAGS=--bitwuzla
 
-FUNCTION_NAME = ntt_layer6_slice
+FUNCTION_NAME = ntt_layer6_inner
 
 # If this proof is found to consume huge amounts of RAM, you can set the
 # EXPENSIVE variable. With new enough versions of the proof tools, this will

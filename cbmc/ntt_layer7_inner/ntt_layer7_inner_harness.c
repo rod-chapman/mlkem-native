@@ -7,8 +7,8 @@
  */
 
 /**
- * @file ntt_layer7_slice_harness.c
- * @brief Implements the proof harness for ntt_layer7_slice function.
+ * @file ntt_layer7_inner_harness.c
+ * @brief Implements the proof harness for ntt_layer7_inner function.
  */
 
 /*
@@ -17,7 +17,7 @@
  *   - include the types needed to declare function arguments
  */
 #include <ntt.h>
-void ntt_layer7_slice(int16_t *r, int zetaindex, int start);
+void ntt_layer7_inner(int16_t *r, int zetaindex, int start);
 
 /**
  * @brief Starting point for formal analysis
@@ -28,5 +28,5 @@ void harness(void)
   int16_t *a;
   int zi;
   int start;
-  ntt_layer7_slice(a, zi, start);
+  ntt_layer7_inner(a, zi, start);
 }
