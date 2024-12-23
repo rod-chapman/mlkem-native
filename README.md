@@ -28,12 +28,7 @@ cd mlkem-native
 
 # Install base packages
 sudo apt-get update
-sudo apt-get install python3-venv python3-pip make
-
-# Setup Python environment
-python3 -m venv venv
-source venv/bin/activate
-python3 -m pip install -r requirements.txt
+sudo apt-get install make gcc python3
 
 # Build and run base tests
 make quickcheck
