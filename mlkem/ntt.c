@@ -168,7 +168,7 @@ __contract__(
   }
 }
 
-STATIC_INLINE_TESTABLE void ntt_layer45_slice(pc r, int zeta_subtree_index,
+STATIC_INLINE_TESTABLE void ntt_layer45_inner(pc r, int zeta_subtree_index,
                                               int start)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
@@ -236,14 +236,14 @@ __contract__(
   assigns(memory_slice(r, sizeof(pc)))
   ensures(array_abs_bound(r, 0, MLKEM_N - 1, NTT_BOUND6)))
 {
-  ntt_layer45_slice(r, 0, 0);
-  ntt_layer45_slice(r, 1, 32);
-  ntt_layer45_slice(r, 2, 64);
-  ntt_layer45_slice(r, 3, 96);
-  ntt_layer45_slice(r, 4, 128);
-  ntt_layer45_slice(r, 5, 160);
-  ntt_layer45_slice(r, 6, 192);
-  ntt_layer45_slice(r, 7, 224);
+  ntt_layer45_inner(r, 0, 0);
+  ntt_layer45_inner(r, 1, 32);
+  ntt_layer45_inner(r, 2, 64);
+  ntt_layer45_inner(r, 3, 96);
+  ntt_layer45_inner(r, 4, 128);
+  ntt_layer45_inner(r, 5, 160);
+  ntt_layer45_inner(r, 6, 192);
+  ntt_layer45_inner(r, 7, 224);
 }
 
 
