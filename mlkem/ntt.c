@@ -21,25 +21,26 @@
 
 typedef int16_t pc[MLKEM_N];
 
-/* nb stucture this as 1 32-bit integer and 2 16-bit integers            */
-/* so the whole thing can be accessed with a single 64-bit aligned read. */
-typedef struct
-{
-  int32_t parent_zeta;
-  int16_t left_child_zeta;
-  int16_t right_child_zeta;
-} zeta_subtree_entry;
+/* Zeta values for layer 4, originally occupying */
+/* positions 8 .. 15 in the full Zeta table.     */
+const int16_t layer4_zetas_table[8] = {-171, 622,   1577,  182,
+                                       962,  -1202, -1474, 1468};
 
-const zeta_subtree_entry layer45_zetas[8] = {
-    {-171, 573, -1325},  {622, 264, 383},    {1577, -829, 1458},
-    {182, -1602, -130},  {962, -681, 1017},  {-1202, 732, 608},
-    {-1474, -1542, 411}, {1468, -205, -1571}};
+/* Zeta values for layer 5, originally occupying "even"      */
+/* positions 16,18,20,22,24,26,28,30 in the full Zeta table. */
+const int16_t layer5_even_zetas_table[8] = {573,  264, -829,  -1602,
+                                            -681, 732, -1542, -205};
+
+/* Zeta values for layer 5, originally occupying "odd"       */
+/* positions 17,19,21,23,25,27,29,31 in the full Zeta table. */
+const int16_t layer5_odd_zetas_table[8] = {-1325, 383, 1458, -130,
+                                           1017,  608, 411,  -1571};
+
 
 const int16_t layer6_zetas[32] = {
-    1223, 652,   -552,  1015, -1293, 1491, -282, -1544, 516, -8,    -320,
-    -666, -1618, -1162, 126,  1469,  -853, -90,  -271,  830, 107,   -1421,
-    -247, -951,  -398,  961,  -1508, -725, 448,  -1065, 677, -1275,
-};
+    1223, 652,   -552,  1015, -1293, 1491, -282, -1544, 516, -8,   -320,
+    -666, -1618, -1162, 126,  1469,  -853, -90,  -271,  830, 107,  -1421,
+    -247, -951,  -398,  961,  -1508, -725, 448,  -1065, 677, -1275};
 
 const int16_t layer7_zetas[64] = {
     /* Layer 7 - index 64 .. 127 */
@@ -180,11 +181,9 @@ __contract__(
   ensures (array_abs_bound(r,          0,    start + 31, NTT_BOUND6))
   ensures (array_abs_bound(r, start + 32, (MLKEM_N - 1), NTT_BOUND4)))
 {
-  const zeta_subtree_entry zeds = layer45_zetas[zeta_subtree_index];
-  const int32_t z1 = zeds.parent_zeta;
-  const int32_t z2 = (int32_t)zeds.left_child_zeta;
-  const int32_t z3 = (int32_t)zeds.right_child_zeta;
-
+  const int16_t z1 = layer4_zetas_table[zeta_subtree_index];
+  const int16_t z2 = layer5_even_zetas_table[zeta_subtree_index];
+  const int16_t z3 = layer5_odd_zetas_table[zeta_subtree_index];
 
   int j;
   for (j = 0; j < 8; j++)
@@ -402,7 +401,12 @@ STATIC_ASSERT(INVNTT_BOUND_REF <= INVNTT_BOUND, invntt_bound)
 
 /* NEW STUFF */
 
-#define CINV 1441
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+/*  MONT_F = mont^2/128 = 1441.                                */
+/*  Used to invert and reduce coefficients in the Inverse NTT. */
+#define MONT_F 1441
 
 STATIC_INLINE_TESTABLE void invntt_layer7_invert_inner(pc r, int zeta_index,
                                                        int start)
@@ -426,10 +430,10 @@ __contract__(
   /* Invert and reduce all coefficients here the first time they */
   /* are read. This is efficient, and also means we can accept   */
   /* any int16_t value for all coefficients as input.            */
-  const int16_t c0 = fqmul(r[ci0], CINV);
-  const int16_t c1 = fqmul(r[ci1], CINV);
-  const int16_t c2 = fqmul(r[ci2], CINV);
-  const int16_t c3 = fqmul(r[ci3], CINV);
+  const int16_t c0 = fqmul(r[ci0], MONT_F);
+  const int16_t c1 = fqmul(r[ci1], MONT_F);
+  const int16_t c2 = fqmul(r[ci2], MONT_F);
+  const int16_t c3 = fqmul(r[ci3], MONT_F);
 
   /* Reduce all coefficients here to meet the precondition of Layer6 */
   r[ci0] = barrett_reduce(c0 + c2);
@@ -523,6 +527,7 @@ __contract__(
   }
 }
 
+#pragma GCC diagnostic pop
 
 /* END NEW STUFF */
 
