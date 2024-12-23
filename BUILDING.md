@@ -4,14 +4,7 @@
 
 ### Prerequisites
 
-To build **mlkem-native**, you need `make` and a C90 compiler. To use the test scripts, you need Python3 with
-dependencies as specified in [requirements.txt](requirements.txt). We recommend using a virtual environment, e.g.:
-
-```bash
-python3 -m venv venv
-./venv/bin/python3 -m pip install -r requirements.txt
-source venv/bin/activate
-```
+To build **mlkem-native**, you need `make` and a C90 compiler. To use the test scripts, you need Python3 (>= 3.7).
 
 ### Using `make`
 
