@@ -527,6 +527,97 @@ __contract__(
   }
 }
 
+
+STATIC_INLINE_TESTABLE void invntt_layer54_inner(pc r, int zeta_index,
+                                                 int start)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(zeta_index >= 0 && zeta_index <= 7)
+  requires(start >= 0 && start <= 224)
+  requires(start % 32 == 0)
+  requires(array_abs_bound(r, 0,     start - 1, NTT_BOUND1))
+  requires(array_abs_bound(r, start, 255, NTT_BOUND2))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0,          start + 31, NTT_BOUND1))
+  ensures(array_abs_bound(r, start + 32, 255,        NTT_BOUND2))
+)
+{
+  const int16_t l4zeta = layer4_zetas_table[zeta_index];
+  const int16_t l5zeta1 = layer5_even_zetas_table[zeta_index];
+  const int16_t l5zeta2 = layer5_odd_zetas_table[zeta_index];
+
+  int j;
+  for (j = 0; j < 8; j++)
+  __loop__(
+    invariant(j >= 0 && j <= 8)
+    invariant(array_abs_bound(r,              0,     start -  1, NTT_BOUND1))
+    invariant(array_abs_bound(r,      start + 0,  start + j - 1, NTT_BOUND1))
+    invariant(array_abs_bound(r,      start + j,      start + 7, NTT_BOUND2))
+    invariant(array_abs_bound(r,      start + 8,  start + j + 7, NTT_BOUND1))
+    invariant(array_abs_bound(r,  start + j + 8,     start + 15, NTT_BOUND2))
+    invariant(array_abs_bound(r,     start + 16, start + j + 15, NTT_BOUND1))
+    invariant(array_abs_bound(r, start + j + 16,     start + 23, NTT_BOUND2))
+    invariant(array_abs_bound(r,     start + 24, start + j + 23, NTT_BOUND1))
+    invariant(array_abs_bound(r, start + j + 24,  (MLKEM_N - 1), NTT_BOUND2)))
+  {
+    const int ci0 = j + start;
+    const int ci8 = ci0 + 8;
+    const int ci16 = ci0 + 16;
+    const int ci24 = ci0 + 24;
+
+    /* Layer 5 */
+    {
+      const int16_t c0 = r[ci0];
+      const int16_t c8 = r[ci8];
+      const int16_t c16 = r[ci16];
+      const int16_t c24 = r[ci24];
+
+      /* Defer reduction of coeffs 0 and 16 here */
+      r[ci0] = c0 + c8;
+      r[ci8] = fqmul(c8 - c0, l5zeta2);
+
+      r[ci16] = c16 + c24;
+      r[ci24] = fqmul(c24 - c16, l5zeta1);
+    }
+
+    /* Layer 4 */
+    {
+      const int16_t c0 = r[ci0];
+      const int16_t c8 = r[ci8];
+      const int16_t c16 = r[ci16];
+      const int16_t c24 = r[ci24];
+
+      /* In layer 4, reduce all coefficients to be in NTT_BOUND1 */
+      /* to meet the pre-condition of Layer321                   */
+      r[ci0] = barrett_reduce(c0 + c16);
+      r[ci16] = fqmul(c16 - c0, l4zeta);
+
+      r[ci8] = barrett_reduce(c8 + c24);
+      r[ci24] = fqmul(c24 - c8, l4zeta);
+    }
+  }
+}
+
+STATIC_NO_INLINE_TESTABLE void invntt_layer54(pc r)
+__contract__(
+  requires(memory_no_alias(r, sizeof(pc)))
+  requires(array_abs_bound(r, 0, 255, NTT_BOUND2))
+  assigns(memory_slice(r, sizeof(pc)))
+  ensures(array_abs_bound(r, 0, 255, NTT_BOUND1))
+)
+{
+  invntt_layer54_inner(r, 7, 0);
+  invntt_layer54_inner(r, 6, 32);
+  invntt_layer54_inner(r, 5, 64);
+  invntt_layer54_inner(r, 4, 96);
+  invntt_layer54_inner(r, 3, 128);
+  invntt_layer54_inner(r, 2, 160);
+  invntt_layer54_inner(r, 1, 192);
+  invntt_layer54_inner(r, 0, 224);
+}
+
+
+
 #pragma GCC diagnostic pop
 
 /* END NEW STUFF */
