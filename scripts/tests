@@ -5,313 +5,233 @@
 import platform
 import os
 import sys
-import click
+import argparse
 from functools import reduce
 
 sys.path.append(f"{os.path.join(os.path.dirname(__file__), 'lib')}")
 from mlkem_test import *
 from util import path
 
-"""
-Click interface configuration
-"""
 
-
-def __callback(n):
-    def callback(ctx, param, value):
-        state = ctx.ensure_object(Options)
-        state.__dict__[n] = value
-        return value
-
-    return callback
-
-
-def add_options(options):
-    """Shortcurt for adding multiple options for Click command"""
-    return lambda func: reduce(lambda f, o: o(f), reversed(options), func)
-
-
-_shared_options = [
-    click.option(
-        "-v",
-        "--verbose",
-        expose_value=False,
-        is_flag=True,
-        show_default=True,
-        default=False,
-        type=bool,
-        help="Show verbose output or not",
-        callback=__callback("verbose"),
-    ),
-    click.option(
-        "-cp",
-        "--cross-prefix",
-        expose_value=False,
-        default="",
-        show_default=True,
-        nargs=1,
-        help="Cross prefix for compilation",
-        callback=__callback("cross_prefix"),
-    ),
-    click.option(
-        "--cflags",
-        expose_value=False,
-        nargs=1,
-        help="Extra cflags to passed in (e.g. '-mcpu=cortex-a72')",
-        callback=__callback("cflags"),
-    ),
-    click.option(
-        "--arch-flags",
-        expose_value=False,
-        nargs=1,
-        help="Extra arch flags to passed in (e.g. '-march=armv8')",
-        callback=__callback("arch_flags"),
-    ),
-    click.option(
-        "--auto/--no-auto",
-        expose_value=False,
-        is_flag=True,
-        show_default=True,
-        default=True,
-        help="Allow makefile to auto configure system specific preprocessor",
-        callback=__callback("auto"),
-    ),
-    click.option(
-        "--opt",
-        expose_value=False,
-        nargs=1,
-        type=click.Choice(["ALL", "OPT", "NO_OPT"], case_sensitive=False),
-        show_default=True,
-        default="ALL",
-        help="Determine whether to compile/run the opt/no_opt binary or both",
-        callback=__callback("opt"),
-    ),
-    click.option(
-        "--compile/--no-compile",
-        expose_value=False,
-        is_flag=True,
-        show_default=True,
-        default=True,
-        help="Determine to compile the binary or not",
-        callback=__callback("compile"),
-    ),
-    click.option(
-        "--run/--no-run",
-        expose_value=False,
-        is_flag=True,
-        show_default=True,
-        default=True,
-        help="Determine to run the compiled binary or not",
-        callback=__callback("run"),
-    ),
-    click.option(
-        "-w",
-        "--exec-wrapper",
-        expose_value=False,
-        show_default=True,
-        default="",
-        help="Run the benchmark binary with the user-customized wrapper.",
-        callback=__callback("exec_wrapper"),
-    ),
-    click.option(
-        "-r",
-        "--run-as-root",
-        expose_value=False,
-        is_flag=True,
-        show_default=True,
-        default=False,
-        type=bool,
-        help="Benchmarking binary is run with sudo.",
-        callback=__callback("run_as_root"),
-    ),
-]
-
-_bench_options = [
-    click.option(
-        "-c",
-        "--cycles",
-        nargs=1,
-        type=click.Choice(["NO", "PMU", "PERF", "M1"]),
-        show_default=True,
-        default="NO",
-        help="Method for counting clock cycles. PMU requires (user-space) access to the Arm Performance Monitor Unit (PMU). PERF requires a kernel with perf support. M1 only works on Apple silicon.",
-    ),
-    click.option(
-        "-o",
-        "--output",
-        nargs=1,
-        help="Path to output file in json format",
-    ),
-    click.option(
-        "-t",
-        "--mac-taskpolicy",
-        nargs=1,
-        type=click.Choice(["utility", "background", "maintenance"]),
-        hidden=platform.system() != "Darwin",
-        show_default=True,
-        default=None,
-        help="Run the program using the specified QoS clamp. Applies to MacOS only. Setting this flag to 'background' guarantees running on E-cores. This is an abbreviation of --exec-wrapper 'taskpolicy -c {mac_taskpolicy}'.",
-    ),
-    click.option(
-        "--components",
-        is_flag=True,
-        type=bool,
-        show_default=True,
-        default=False,
-        help="Benchmark low-level components",
-    ),
-]
-
-
-@click.group(invoke_without_command=True)
 def cli():
-    pass
+    common_parser = argparse.ArgumentParser(add_help=False)
 
-
-@cli.command(
-    short_help="Run the functional tests for all parameter sets",
-    context_settings={"show_default": True},
-)
-@add_options(_shared_options)
-@click.make_pass_decorator(Options, ensure=True)
-def func(opts: Options):
-    Tests(opts).func()
-
-
-@cli.command(
-    short_help="Run the nistkat tests for all parameter sets",
-    context_settings={"show_default": True},
-)
-@add_options(_shared_options)
-@click.make_pass_decorator(Options, ensure=True)
-def nistkat(opts: Options):
-    Tests(opts).nistkat()
-
-
-@cli.command(
-    short_help="Run the kat tests for all parameter sets",
-    context_settings={"show_default": True},
-)
-@add_options(_shared_options)
-@click.make_pass_decorator(Options, ensure=True)
-def kat(opts: Options):
-    Tests(opts).kat()
-
-
-@cli.command(
-    short_help="Run ACVP client",
-    context_settings={"show_default": True},
-)
-@add_options(_shared_options)
-@add_options(
-    [
-        click.option(
-            "-d",
-            "--acvp_dir",
-            nargs=1,
-            show_default=True,
-            type=click.Path(),
-            default=path("test/acvp_data"),
-            help="Path to acvp directory",
-        ),
-    ]
-)
-@click.make_pass_decorator(Options, ensure=True)
-def acvp(opts: Options, acvp_dir: str):
-    Tests(opts).acvp(acvp_dir)
-
-
-@cli.command(
-    short_help="Run the benchmarks for all parameter sets",
-    context_settings={"show_default": True},
-)
-@add_options(_shared_options)
-@add_options(_bench_options)
-@click.make_pass_decorator(Options, ensure=True)
-def bench(
-    opts: Options,
-    cycles: str,
-    output,
-    mac_taskpolicy,
-    components,
-):
-    Tests(opts).bench(
-        cycles,
-        output,
-        mac_taskpolicy,
-        components,
+    # Common arguments for all sub-commands
+    common_parser.add_argument(
+        "-v", "--verbose", help="Show verbose output or not", action="store_true"
+    )
+    common_parser.add_argument(
+        "-cp", "--cross-prefix", help="Cross prefix for compilation", default=""
+    )
+    common_parser.add_argument(
+        "--cflags", help="Extra cflags to passed in (e.g. '-mcpu=cortex-a72')"
+    )
+    common_parser.add_argument(
+        "--arch-flags", help="Extra arch flags to passed in (e.g. '-march=armv8')"
     )
 
+    # --auto / --no-auto
+    auto_group = common_parser.add_mutually_exclusive_group()
+    auto_group.add_argument(
+        "--auto",
+        action="store_true",
+        dest="auto",
+        help="Allow makefile to auto configure system specific preprocessor",
+        default=True,
+    )
+    auto_group.add_argument(
+        "--no-auto",
+        action="store_false",
+        dest="auto",
+        help="Disallow makefile to auto configure system specific preprocessor",
+    )
 
-@cli.command(
-    short_help="Run all tests (except benchmark for now)",
-    context_settings={"show_default": True},
-)
-@add_options(_shared_options)
-@add_options(
-    [
-        click.option(
-            "--func/--no-func",
-            is_flag=True,
-            show_default=True,
-            default=True,
-            help="Determine whether to run func test or not",
-        ),
-        click.option(
-            "--kat/--no-kat",
-            is_flag=True,
-            show_default=True,
-            default=True,
-            help="Determine whether to run kat test or not",
-        ),
-        click.option(
-            "--nistkat/--no-nistkat",
-            is_flag=True,
-            show_default=True,
-            default=True,
-            help="Determine whether to run nistkat test or not",
-        ),
-        click.option(
-            "--acvp/--no-acvp",
-            is_flag=True,
-            show_default=True,
-            default=True,
-            help="Determine whether to run acvp test or not",
-        ),
-    ]
-)
-@click.make_pass_decorator(Options, ensure=True)
-def all(
-    opts: Options,
-    func: bool,
-    kat: bool,
-    nistkat: bool,
-    acvp: bool,
-):
-    Tests(opts).all(func, kat, nistkat, acvp)
+    common_parser.add_argument(
+        "--opt",
+        help="Determine whether to compile/run the opt/no_opt binary or both",
+        choices=["ALL", "OPT", "NO_OPT"],
+        type=str.upper,
+        default="ALL",
+    )
 
+    # --compile / --no-compile
+    compile_group = common_parser.add_mutually_exclusive_group()
+    compile_group.add_argument(
+        "--compile",
+        action="store_true",
+        dest="compile",
+        help="Compile the binaries",
+        default=True,
+    )
+    compile_group.add_argument(
+        "--no-compile",
+        action="store_false",
+        dest="compile",
+        help="Do not compile the binaries",
+    )
 
-@cli.command(
-    short_help="Run the CBMC proofs for all parameter sets",
-    context_settings={"show_default": True},
-)
-@click.make_pass_decorator(Options, ensure=True)
-@add_options(
-    [
-        click.option(
-            "--k",
-            expose_value=False,
-            nargs=1,
-            type=click.Choice(["2", "3", "4", "ALL"]),
-            show_default=True,
-            default="ALL",
-            help="MLKEM parameter set (MLKEM_K).",
-            callback=__callback("k"),
+    # --run / --no-run
+    run_group = common_parser.add_mutually_exclusive_group()
+    run_group.add_argument(
+        "--run", action="store_true", dest="run", help="Run the binaries", default=True
+    )
+    run_group.add_argument(
+        "--no-run", action="store_false", dest="run", help="Do not run the binaries"
+    )
+
+    common_parser.add_argument(
+        "-w", "--exec-wrapper", help="Run the binary with the user-customized wrapper"
+    )
+    common_parser.add_argument("-r", "--run-as-root", help="Run the binary as root")
+
+    main_parser = argparse.ArgumentParser()
+
+    cmd_subparsers = main_parser.add_subparsers(title="Commands", dest="cmd")
+
+    # all arguments
+    all_parser = cmd_subparsers.add_parser(
+        "all", help="Run all tests (except benchmark for now)", parents=[common_parser]
+    )
+
+    func_group = all_parser.add_mutually_exclusive_group()
+    func_group.add_argument(
+        "--func", action="store_true", dest="func", help="Run func test", default=True
+    )
+    func_group.add_argument(
+        "--no-func", action="store_false", dest="func", help="Do not run func test"
+    )
+
+    kat_group = all_parser.add_mutually_exclusive_group()
+    kat_group.add_argument(
+        "--kat", action="store_true", dest="kat", help="Run kat test", default=True
+    )
+    kat_group.add_argument(
+        "--no-kat", action="store_false", dest="kat", help="Do not run kat test"
+    )
+
+    nistkat_group = all_parser.add_mutually_exclusive_group()
+    nistkat_group.add_argument(
+        "--nistkat",
+        action="store_true",
+        dest="nistkat",
+        help="Run nistkat test",
+        default=True,
+    )
+    nistkat_group.add_argument(
+        "--no-nistkatkat",
+        action="store_false",
+        dest="nistkat",
+        help="Do not run nistkat test",
+    )
+
+    acvp_group = all_parser.add_mutually_exclusive_group()
+    acvp_group.add_argument(
+        "--acvp", action="store_true", dest="acvp", help="Run acvp test", default=True
+    )
+    acvp_group.add_argument(
+        "--no-acvp", action="store_false", dest="acvp", help="Do not run acvp test"
+    )
+
+    # acvp arguments
+    acvp_parser = cmd_subparsers.add_parser(
+        "acvp", help="Run ACVP client", parents=[common_parser]
+    )
+
+    acvp_parser.add_argument(
+        "-d",
+        "--acvp_dir",
+        dest="acvp_dir",
+        default=path("test/acvp_data"),
+        help="Path to acvp directory",
+    )
+
+    # bench arguments
+    bench_parser = cmd_subparsers.add_parser(
+        "bench",
+        help="Run the benchmarks for all parameter sets",
+        parents=[common_parser],
+    )
+
+    bench_parser.add_argument(
+        "-c",
+        "--cycles",
+        help="Method for counting clock cycles. PMU requires (user-space) access to the Arm Performance Monitor Unit (PMU). PERF requires a kernel with perf support. M1 only works on Apple silicon.",
+        choices=["NO", "PMU", "PERF", "M1"],
+        type=str.upper,
+        default="NO",
+    )
+    bench_parser.add_argument(
+        "-o", "--output", help="Path to output file in json format"
+    )
+    if platform.system() == "Darwin":
+        bench_parser.add_argument(
+            "-t",
+            "--mac-taskpolicy",
+            help="Run the program using the specified QoS clamp. Applies to MacOS only. Setting this flag to 'background' guarantees running on E-cores. This is an abbreviation of --exec-wrapper 'taskpolicy -c {mac_taskpolicy}'.",
+            choices=["utility", "background", "maintenance"],
+            type=str.lower,
         )
-    ]
-)
-def cbmc(opts: Options):
-    Tests(opts).cbmc(opts.k)
+    bench_parser.add_argument(
+        "--components",
+        help="Benchmark low-level components",
+        action="store_true",
+        default=False,
+    )
+
+    # cbmc arguments
+    cbmc_parser = cmd_subparsers.add_parser(
+        "cbmc",
+        help="Run the CBMC proofs for all parameter sets",
+        parents=[common_parser],
+    )
+
+    cbmc_parser.add_argument(
+        "--k",
+        help="MLKEM parameter set (MLKEM_K)",
+        choices=["2", "3", "4", "ALL"],
+        type=str.upper,
+        default="ALL",
+    )
+
+    # func arguments
+    func_parser = cmd_subparsers.add_parser(
+        "func",
+        help="Run the functional tests for all parameter sets",
+        parents=[common_parser],
+    )
+
+    # kat arguments
+    kat_parser = cmd_subparsers.add_parser(
+        "kat", help="Run the kat tests for all parameter sets", parents=[common_parser]
+    )
+
+    # nistkat arguments
+    nistkat_parser = cmd_subparsers.add_parser(
+        "nistkat",
+        help="Run the nistkat tests for all parameter sets",
+        parents=[common_parser],
+    )
+
+    args = main_parser.parse_args()
+
+    if args.cmd == "all":
+        Tests(args).all(args.func, args.kat, args.nistkat, args.acvp)
+    elif args.cmd == "acvp":
+        Tests(args).acvp(args.acvp_dir)
+    elif args.cmd == "bench":
+        if not hasattr(args, "mac_taskpolicy"):
+            args.mac_taskpolicy = None
+        Tests(args).bench(
+            args.cycles, args.output, args.mac_taskpolicy, args.components
+        )
+    elif args.cmd == "cbmc":
+        Tests(args).cbmc(args.k)
+    elif args.cmd == "func":
+        Tests(args).func()
+    elif args.cmd == "kat":
+        Tests(args).kat()
+    elif args.cmd == "nistkat":
+        Tests(args).nistkat()
 
 
 if __name__ == "__main__":
