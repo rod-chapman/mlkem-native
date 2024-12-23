@@ -248,7 +248,7 @@ __contract__(
 
 
 
-STATIC_INLINE_TESTABLE void ntt_layer6_slice(pc r, const int zeta_index,
+STATIC_INLINE_TESTABLE void ntt_layer6_inner(pc r, const int zeta_index,
                                              const int start)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
@@ -295,11 +295,11 @@ __contract__(
     invariant(array_abs_bound(r,     0,     j * 8 - 1, NTT_BOUND7))
     invariant(array_abs_bound(r, j * 8, (MLKEM_N - 1), NTT_BOUND6)))
   {
-    ntt_layer6_slice(r, j, j * 8);
+    ntt_layer6_inner(r, j, j * 8);
   }
 }
 
-STATIC_INLINE_TESTABLE void ntt_layer7_slice(pc r, int zeta_index, int start)
+STATIC_INLINE_TESTABLE void ntt_layer7_inner(pc r, int zeta_index, int start)
 __contract__(
   requires(memory_no_alias(r, sizeof(pc)))
   requires(zeta_index >= 0 && zeta_index <= 63)
@@ -348,7 +348,7 @@ __contract__(
     invariant(array_abs_bound(r,     0,     j * 4 - 1, NTT_BOUND8))
     invariant(array_abs_bound(r, j * 4, (MLKEM_N - 1), NTT_BOUND7)))
   {
-    ntt_layer7_slice(r, j, j * 4);
+    ntt_layer7_inner(r, j, j * 4);
   }
 }
 
