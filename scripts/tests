@@ -158,7 +158,7 @@ def cli():
         help="Method for counting clock cycles. PMU requires (user-space) access to the Arm Performance Monitor Unit (PMU). PERF requires a kernel with perf support. M1 only works on Apple silicon.",
         choices=["NO", "PMU", "PERF", "M1"],
         type=str.upper,
-        default="NO",
+        required=True,
     )
     bench_parser.add_argument(
         "-o", "--output", help="Path to output file in json format"

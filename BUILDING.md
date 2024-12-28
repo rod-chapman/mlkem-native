@@ -19,10 +19,15 @@ To merely build test and benchmarking components, use the following `make` targe
 
 ```bash
 make mlkem
-make bench
-make bench_components
 make nistkat
 make kat
+```
+
+For benchmarking, specify the cycle counting method. Currently, **mlkem-native** is supporting PERF, PMU (AArch64 and x86 only), M1 (Apple Silicon only):
+```
+# CYCLES has to be on of PERF, PMU, M1, NO
+make bench CYCLES=PERF
+make bench_components CYCLES=PERF
 ```
 
 The resulting binaries can then be found in `test/build`.

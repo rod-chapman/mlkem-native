@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-.PHONY: mlkem kat nistkat clean quickcheck buildall checkall all
+.PHONY: mlkem kat nistkat clean quickcheck buildall checkall all check-defined-CYCLES
 .DEFAULT_GOAL := buildall
 all: quickcheck
 
@@ -43,7 +43,13 @@ mlkem: \
   $(MLKEM768_DIR)/bin/test_mlkem768 \
   $(MLKEM1024_DIR)/bin/test_mlkem1024
 
-bench: \
+# Enforce setting CYCLES make variable when 
+# building benchmarking binaries
+check_defined = $(if $(value $1),, $(error $2))
+check-defined-CYCLES:
+	@:$(call check_defined,CYCLES,CYCLES undefined. Benchmarking requires setting one of NO PMU PERF M1)
+
+bench: check-defined-CYCLES \
 	$(MLKEM512_DIR)/bin/bench_mlkem512 \
 	$(MLKEM768_DIR)/bin/bench_mlkem768 \
 	$(MLKEM1024_DIR)/bin/bench_mlkem1024
@@ -53,7 +59,7 @@ acvp: \
 	$(MLKEM768_DIR)/bin/acvp_mlkem768 \
 	$(MLKEM1024_DIR)/bin/acvp_mlkem1024
 
-bench_components: \
+bench_components: check-defined-CYCLES \
 	$(MLKEM512_DIR)/bin/bench_components_mlkem512 \
 	$(MLKEM768_DIR)/bin/bench_components_mlkem768 \
 	$(MLKEM1024_DIR)/bin/bench_components_mlkem1024

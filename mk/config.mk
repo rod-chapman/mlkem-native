@@ -60,8 +60,6 @@ ifeq ($(HOST_PLATFORM),Linux-x86_64)
 	CFLAGS += -z noexecstack
 endif
 
-CYCLES ?= NO
-
 ifeq ($(CYCLES),PMU)
 	CFLAGS += -DPMU_CYCLES
 endif
