@@ -20,15 +20,32 @@ info()
 }
 
 info "Formatting nix files"
+if ! command -v nixpkgs-fmt 2>&1 >/dev/null; then
+  echo "nixpkgs-fmt not found. Are you running in a nix shell? See BUILDING.md."
+  exit 1
+fi
+
 nixpkgs-fmt "$ROOT"
 
 info "Formatting shell scripts"
+if ! command -v shfmt 2>&1 >/dev/null; then
+  echo "shfmt not found. Are you running in a nix shell? See BUILDING.md."
+  exit 1
+fi
 shfmt -s -w -l -i 2 -ci -fn $(shfmt -f $(git grep -l '' :/))
 
 info "Formatting python scripts"
+if ! command -v black 2>&1 >/dev/null; then
+  echo "black not found. Are you running in a nix shell? See BUILDING.md."
+  exit 1
+fi
 black --include "(scripts/tests|\.py$)" "$ROOT"
 
 info "Formatting c files"
+if ! command -v clang-format 2>&1 >/dev/null; then
+  echo "clang-format not found. Are you running in a nix shell? See BUILDING.md."
+  exit 1
+fi
 clang-format -i $(git ls-files ":/*.c" ":/*.h")
 
 info "Checking for eol"
