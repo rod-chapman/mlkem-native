@@ -17,9 +17,7 @@
 #include <string.h>
 #include "arith_native_x86_64.h"
 #include "consts.h"
-/* #define BMI */
 
-#ifndef BMI
 static const uint8_t idx[256][8] = {
     {-1, -1, -1, -1, -1, -1, -1, -1}, {0, -1, -1, -1, -1, -1, -1, -1},
     {2, -1, -1, -1, -1, -1, -1, -1},  {0, 2, -1, -1, -1, -1, -1, -1},
@@ -149,7 +147,6 @@ static const uint8_t idx[256][8] = {
     {2, 6, 8, 10, 12, 14, -1, -1},    {0, 2, 6, 8, 10, 12, 14, -1},
     {4, 6, 8, 10, 12, 14, -1, -1},    {0, 4, 6, 8, 10, 12, 14, -1},
     {2, 4, 6, 8, 10, 12, 14, -1},     {0, 2, 4, 6, 8, 10, 12, 14}};
-#endif
 
 #define _mm256_cmpge_epu16(a, b) _mm256_cmpeq_epi16(_mm256_max_epu16(a, b), a)
 #define _mm_cmpge_epu16(a, b) _mm_cmpeq_epi16(_mm_max_epu16(a, b), a)
@@ -159,9 +156,6 @@ unsigned int rej_uniform_avx2(int16_t *RESTRICT r, const uint8_t *buf)
   unsigned int ctr, pos;
   uint16_t val0, val1;
   uint32_t good;
-#ifdef BMI
-  uint64_t idx0, idx1, idx2, idx3;
-#endif
   const __m256i bound = _mm256_load_si256(&qdata.vec[_16XQ / 16]);
   const __m256i ones = _mm256_set1_epi8(1);
   const __m256i mask = _mm256_set1_epi16(0xFFF);
@@ -195,25 +189,6 @@ unsigned int rej_uniform_avx2(int16_t *RESTRICT r, const uint8_t *buf)
     g0 = _mm256_packs_epi16(g0, g1);
     good = _mm256_movemask_epi8(g0);
 
-#ifdef BMI
-    idx0 = _pdep_u64(good >> 0, 0x0101010101010101);
-    idx1 = _pdep_u64(good >> 8, 0x0101010101010101);
-    idx2 = _pdep_u64(good >> 16, 0x0101010101010101);
-    idx3 = _pdep_u64(good >> 24, 0x0101010101010101);
-    idx0 = (idx0 << 8) - idx0;
-    idx0 = _pext_u64(0x0E0C0A0806040200, idx0);
-    idx1 = (idx1 << 8) - idx1;
-    idx1 = _pext_u64(0x0E0C0A0806040200, idx1);
-    idx2 = (idx2 << 8) - idx2;
-    idx2 = _pext_u64(0x0E0C0A0806040200, idx2);
-    idx3 = (idx3 << 8) - idx3;
-    idx3 = _pext_u64(0x0E0C0A0806040200, idx3);
-
-    g0 = _mm256_castsi128_si256(_mm_cvtsi64_si128(idx0));
-    g1 = _mm256_castsi128_si256(_mm_cvtsi64_si128(idx1));
-    g0 = _mm256_inserti128_si256(g0, _mm_cvtsi64_si128(idx2), 1);
-    g1 = _mm256_inserti128_si256(g1, _mm_cvtsi64_si128(idx3), 1);
-#else
     g0 = _mm256_castsi128_si256(
         _mm_loadl_epi64((__m128i *)&idx[(good >> 0) & 0xFF]));
     g1 = _mm256_castsi128_si256(
@@ -222,7 +197,6 @@ unsigned int rej_uniform_avx2(int16_t *RESTRICT r, const uint8_t *buf)
         g0, _mm_loadl_epi64((__m128i *)&idx[(good >> 16) & 0xFF]), 1);
     g1 = _mm256_inserti128_si256(
         g1, _mm_loadl_epi64((__m128i *)&idx[(good >> 24) & 0xFF]), 1);
-#endif
 
     g2 = _mm256_add_epi8(g0, ones);
     g3 = _mm256_add_epi8(g1, ones);
@@ -254,16 +228,8 @@ unsigned int rej_uniform_avx2(int16_t *RESTRICT r, const uint8_t *buf)
     t = _mm_cmpgt_epi16(_mm256_castsi256_si128(bound), f);
     good = _mm_movemask_epi8(t);
 
-#ifdef BMI
-    good &= 0x5555;
-    idx0 = _pdep_u64(good, 0x1111111111111111);
-    idx0 = (idx0 << 8) - idx0;
-    idx0 = _pext_u64(0x0E0C0A0806040200, idx0);
-    pilo = _mm_cvtsi64_si128(idx0);
-#else
     good = _pext_u32(good, 0x5555);
     pilo = _mm_loadl_epi64((__m128i *)&idx[good]);
-#endif
 
     pihi = _mm_add_epi8(pilo, _mm256_castsi256_si128(ones));
     pilo = _mm_unpacklo_epi8(pilo, pihi);
