@@ -24,10 +24,9 @@ gh_env = os.environ.get("GITHUB_ENV")
 
 class CompileOptions(object):
 
-    def __init__(self, cross_prefix, cflags, arch_flags, auto, verbose):
+    def __init__(self, cross_prefix, cflags, auto, verbose):
         self.cross_prefix = cross_prefix
         self.cflags = cflags
-        self.arch_flags = arch_flags
         self.auto = auto
         self.verbose = verbose
 
@@ -39,7 +38,6 @@ class Options(object):
     def __init__(self):
         self.cross_prefix = ""
         self.cflags = ""
-        self.arch_flags = ""
         self.auto = True
         self.verbose = False
         self.opt = "ALL"
@@ -56,7 +54,6 @@ class Base:
         self.test_type = test_type
         self.cross_prefix = copts.cross_prefix
         self.cflags = copts.cflags
-        self.arch_flags = copts.arch_flags
         self.auto = copts.auto
         self.verbose = copts.verbose
         self.opt = opt
@@ -102,8 +99,6 @@ class Base:
         env = os.environ.copy()
         if self.cflags is not None:
             env["CFLAGS"] = self.cflags
-        if self.arch_flags is not None:
-            env["ARCH_FLAGS"] = self.arch_flags
 
         env.update(extra_make_envs)
 
@@ -299,7 +294,6 @@ class Tests:
         copts = CompileOptions(
             opts.cross_prefix,
             opts.cflags,
-            opts.arch_flags,
             opts.auto,
             opts.verbose,
         )
