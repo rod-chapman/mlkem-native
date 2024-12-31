@@ -8,8 +8,14 @@
 #
 # Invokes `acvp_mlkem{lvl}` under the hood.
 
+import os
 import json
+import sys
 import subprocess
+
+# Check if we need to use a wrapper for execution (e.g. QEMU)
+exec_prefix = os.environ.get("EXEC_WRAPPER", "")
+exec_prefix = [exec_prefix] if exec_prefix != "" else []
 
 acvp_dir = "test/acvp_data"
 acvp_keygen_json = f"{acvp_dir}/acvp_keygen_internalProjection.json"
@@ -20,6 +26,14 @@ with open(acvp_keygen_json, "r") as f:
 
 with open(acvp_encapDecap_json, "r") as f:
     acvp_encapDecap_data = json.load(f)
+
+
+def err(msg, **kwargs):
+    print(msg, file=sys.stderr, **kwargs)
+
+
+def info(msg, **kwargs):
+    print(msg, **kwargs)
 
 
 def get_acvp_binary(tg):
@@ -36,10 +50,10 @@ def get_acvp_binary(tg):
 
 
 def run_encapDecap_test(tg, tc):
-    print(f"Running encapDecap test case {tc['tcId']} ({tg['function']}) ... ", end="")
+    info(f"Running encapDecap test case {tc['tcId']} ({tg['function']}) ... ", end="")
     if tg["function"] == "encapsulation":
         acvp_bin = get_acvp_binary(tg)
-        acvp_call = [
+        acvp_call = exec_prefix + [
             acvp_bin,
             "encapDecap",
             "AFT",
@@ -49,21 +63,21 @@ def run_encapDecap_test(tg, tc):
         ]
         result = subprocess.run(acvp_call, encoding="utf-8", capture_output=True)
         if result.returncode != 0:
-            print("FAIL!")
-            print(f"{acvp_call} failed with error code {result.returncode}")
-            print(result.stderr)
+            err("FAIL!")
+            err(f"{acvp_call} failed with error code {result.returncode}")
+            err(result.stderr)
             exit(1)
         # Extract results and compare to expected data
         for l in result.stdout.splitlines():
             (k, v) = l.split("=")
             if v != tc[k]:
-                print("FAIL!")
-                print(f"Mismatching result for {k}: expected {tc[k]}, got {v}")
+                err("FAIL!")
+                err(f"Mismatching result for {k}: expected {tc[k]}, got {v}")
                 exit(1)
-        print("OK")
+        info("OK")
     elif tg["function"] == "decapsulation":
         acvp_bin = get_acvp_binary(tg)
-        acvp_call = [
+        acvp_call = exec_prefix + [
             acvp_bin,
             "encapDecap",
             "VAL",
@@ -73,38 +87,44 @@ def run_encapDecap_test(tg, tc):
         ]
         result = subprocess.run(acvp_call, encoding="utf-8", capture_output=True)
         if result.returncode != 0:
-            print("FAIL!")
-            print(f"{acvp_call} failed with error code {result.returncode}")
-            print(result.stderr)
+            err("FAIL!")
+            err(f"{acvp_call} failed with error code {result.returncode}")
+            err(result.stderr)
             exit(1)
         # Extract results and compare to expected data
         for l in result.stdout.splitlines():
             (k, v) = l.split("=")
             if v != tc[k]:
-                print("FAIL!")
-                print(f"Mismatching result for {k}: expected {tc[k]}, got {v}")
+                err("FAIL!")
+                err(f"Mismatching result for {k}: expected {tc[k]}, got {v}")
                 exit(1)
-        print("OK")
+        info("OK")
 
 
 def run_keyGen_test(tg, tc):
-    print(f"Running keyGen test case {tc['tcId']} ... ", end="")
+    info(f"Running keyGen test case {tc['tcId']} ... ", end="")
     acvp_bin = get_acvp_binary(tg)
-    acvp_call = [acvp_bin, "keyGen", "AFT", f"z={tc['z']}", f"d={tc['d']}"]
+    acvp_call = exec_prefix + [
+        acvp_bin,
+        "keyGen",
+        "AFT",
+        f"z={tc['z']}",
+        f"d={tc['d']}",
+    ]
     result = subprocess.run(acvp_call, encoding="utf-8", capture_output=True)
     if result.returncode != 0:
-        print("FAIL!")
-        print(f"{acvp_call} failed with error code {result.returncode}")
-        print(result.stderr)
+        err("FAIL!")
+        err(f"{acvp_call} failed with error code {result.returncode}")
+        err(result.stderr)
         exit(1)
     # Extract results and compare to expected data
     for l in result.stdout.splitlines():
         (k, v) = l.split("=")
         if v != tc[k]:
-            print("FAIL!")
-            print(f"Mismatching result for {k}: expected {tc[k]}, got {v}")
+            err("FAIL!")
+            err(f"Mismatching result for {k}: expected {tc[k]}, got {v}")
             exit(1)
-    print("OK")
+    info("OK")
 
 
 for tg in acvp_encapDecap_data["testGroups"]:

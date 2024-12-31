@@ -447,79 +447,44 @@ class Tests:
         if fail:
             exit(1)
 
-    def _run_acvp(self, opt, acvp_dir="test/acvp_data"):
-        acvp_keygen_json = f"{acvp_dir}/acvp_keygen_internalProjection.json"
-        acvp_encapDecap_json = f"{acvp_dir}/acvp_encapDecap_internalProjection.json"
-
-        with open(acvp_keygen_json, "r") as f:
-            acvp_keygen_data = json.load(f)
-
-        with open(acvp_encapDecap_json, "r") as f:
-            acvp_encapDecap_data = json.load(f)
-
-        def _check_proc(tc, scheme, raw):
-            """Checks whether the ACVP result is as expected"""
-            actual = raw.decode("utf-8")
-            fail = False
-            err = ""
-            for l in actual.splitlines():
-                (k, v) = l.split("=")
-                if v != tc[k]:
-                    fail = True
-                    err = (
-                        err
-                        + f"Failed, Mismatching result for {k}: expect {tc[k]}, but got {v}\n"
-                    )
-            return (fail, err)
+    def _run_acvp(self, opt):
 
         opt_label = "opt" if opt else "no_opt"
+        log = logger(TEST_TYPES.ACVP, "Run", self._acvp.ts[opt_label].cross_prefix, opt)
 
-        def init_results():
-            results = {}
-            results[opt_label] = {}
-            for s in SCHEME:
-                results[opt_label][s] = False
-            return results
-
-        fail = False
-        results = init_results()
-        # encapDecap
         if gh_env is not None:
             print(
-                f"::group::run {self.compile_mode} {opt_label} {TEST_TYPES.ACVP.desc()} encapDecap"
+                f"::group::run {self.compile_mode} {opt_label} {TEST_TYPES.ACVP.desc()}"
             )
 
-        for i, tg in enumerate(acvp_encapDecap_data["testGroups"]):
-            scheme = SCHEME.from_str(tg["parameterSet"])
+        env_update = {"EXEC_WRAPPER": " ".join(self.cmd_prefix)}
+        env = os.environ.copy()
+        env.update(env_update)
 
-            for tc in tg["tests"]:
-                if tg["function"] == "encapsulation":
-                    extra_args = [
-                        "encapDecap",
-                        "AFT",
-                        "encapsulation",
-                        f"ek={tc['ek']}",
-                        f"m={tc['m']}",
-                    ]
+        def dict2str(dict):
+            s = ""
+            for k, v in dict.items():
+                s += f"{k}={v} "
+            return s
 
-                elif tg["function"] == "decapsulation":
-                    extra_args = [
-                        "encapDecap",
-                        "VAL",
-                        "decapsulation",
-                        f"dk={tg['dk']}",
-                        f"c={tc['c']}",
-                    ]
+        args = ["make", "check_acvp"]
+        log.info(dict2str(env_update) + " ".join(args))
 
-                rs = self._acvp.run_scheme(
-                    opt,
-                    scheme,
-                    extra_args=extra_args,
-                    check_proc=partial(_check_proc, tc),
-                    cmd_prefix=self.cmd_prefix,
-                )
-                for k, r in rs.items():
-                    results[k][scheme] = results[k][scheme] or r[scheme]
+        p = subprocess.run(
+            args,
+            capture_output=True,
+            universal_newlines=False,
+            env=env,
+        )
+        fail = p.returncode != 0
+        if fail is True:
+            log.error(p.stderr.decode())
+            log.error(f"ACVP test failed: {p.returncode}")
+
+        results = {}
+        results[opt_label] = {}
+        for s in SCHEME:
+            results[opt_label][s] = fail
 
         if gh_env is not None:
             print(f"::endgroup::")
@@ -528,52 +493,7 @@ class Tests:
             title = (
                 "## " + (self._acvp.compile_mode) + " " + (k.capitalize()) + " Tests"
             )
-            github_summary(title, f"{TEST_TYPES.ACVP.desc()} encapDecap", result)
-
-            fail = reduce(lambda acc, c: acc or c, result.values(), fail)
-
-        results = init_results()
-
-        if gh_env is not None:
-            print(
-                f"::group::run {self.compile_mode} {opt_label} {TEST_TYPES.ACVP.desc()} keyGen"
-            )
-
-        for i, tg in enumerate(acvp_keygen_data["testGroups"]):
-            scheme = SCHEME.from_str(tg["parameterSet"])
-
-            for tc in tg["tests"]:
-                extra_args = [
-                    "keyGen",
-                    "AFT",
-                    f"z={tc['z']}",
-                    f"d={tc['d']}",
-                ]
-
-                rs = self._acvp.run_scheme(
-                    opt,
-                    scheme,
-                    extra_args=extra_args,
-                    check_proc=partial(_check_proc, tc),
-                    cmd_prefix=self.cmd_prefix,
-                )
-                for k, r in rs.items():
-                    results[k][scheme] = results[k][scheme] or r[scheme]
-
-        if gh_env is not None:
-            print(f"::endgroup::")
-
-        for k, result in results.items():
-            title = (
-                "## "
-                + (self._acvp.ts[k].compile_mode)
-                + " "
-                + (k.capitalize())
-                + " Tests"
-            )
-            github_summary(title, f"{TEST_TYPES.ACVP.desc()} keyGen", result)
-
-            fail = reduce(lambda acc, c: acc or c, result.values(), fail)
+            github_summary(title, f"{TEST_TYPES.ACVP.desc()}", result)
 
         return fail
 
@@ -584,7 +504,7 @@ class Tests:
             if self.compile:
                 self._acvp.compile(opt)
             if self.run:
-                return self._run_acvp(opt, acvp_dir)
+                return self._run_acvp(opt)
 
         fail = False
 
