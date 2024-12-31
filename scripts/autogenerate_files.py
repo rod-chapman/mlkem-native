@@ -14,6 +14,7 @@ montgomery_factor = pow(2, 16, modulus)
 #
 # It currently covers:
 # - zeta values for the reference NTT and invNTT
+# - lookup tables used for fast rejection sampling
 
 
 def gen_header():
@@ -400,6 +401,57 @@ def gen_aarch64_rej_uniform_table(dry_run=False):
     )
 
 
+def gen_avx2_rej_uniform_table_rows():
+    # The index into the lookup table is an 8-bit bitmap, i.e. a number 0..255.
+    # Conceptually, the table entry at index i is a vector of 8 16-bit values, of
+    # which only the first popcount(i) are set; those are the indices of the set-bits
+    # in i.
+    def get_set_bits_idxs(i):
+        bits = list(map(int, format(i, "08b")))
+        bits.reverse()
+        return [bit_idx for bit_idx in range(8) if bits[bit_idx] == 1]
+
+    for i in range(256):
+        idxs = get_set_bits_idxs(i)
+        idxs = [2 * i for i in idxs]
+        # Pad by -1
+        idxs = idxs + [-1] * (8 - len(idxs))
+        yield "{" + ",".join(map(str, idxs)) + "}"
+
+
+def gen_avx2_rej_uniform_table(dry_run=False):
+    def gen():
+        yield from gen_header()
+        yield '#include "common.h"'
+        yield ""
+        yield "#if defined(MLKEM_NATIVE_ARITH_BACKEND_X86_64_DEFAULT)"
+        yield ""
+        yield "#include <stdint.h>"
+        yield '#include "arith_native_x86_64.h"'
+        yield ""
+        yield "/*"
+        yield " * Lookup table used by rejection sampling of the public matrix."
+        yield " * See autogenerate_files.py for details."
+        yield " */"
+        yield "ALIGN const uint8_t rej_uniform_table[256][8] = {"
+        yield from map(lambda t: str(t) + ",", gen_avx2_rej_uniform_table_rows())
+        yield "};"
+        yield ""
+        yield "#else"
+        yield ""
+        yield "/* Dummy declaration for compilers disliking empty compilation units */"
+        yield "#define empty_cu_avx2_rej_uniform_table MLKEM_NAMESPACE(empty_cu_avx2_rej_uniform_table)"
+        yield "int empty_cu_avx2_rej_uniform_table;"
+        yield "#endif"
+        yield ""
+
+    update_file(
+        "mlkem/native/x86_64/src/rej_uniform_table.c",
+        "\n".join(gen()),
+        dry_run=dry_run,
+    )
+
+
 def signed_reduce_u16(x):
     x = x % 2**16
     if x >= 2**15:
@@ -489,6 +541,7 @@ def _main():
     gen_aarch64_fwd_ntt_zeta_file(args.dry_run)
     gen_aarch64_rej_uniform_table(args.dry_run)
     gen_avx2_fwd_ntt_zeta_file(args.dry_run)
+    gen_avx2_rej_uniform_table(args.dry_run)
 
 
 if __name__ == "__main__":
