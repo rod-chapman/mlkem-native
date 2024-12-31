@@ -8,9 +8,14 @@
 #
 # Invokes `acvp_mlkem{lvl}` under the hood.
 
+import os
 import json
 import sys
 import subprocess
+
+# Check if we need to use a wrapper for execution (e.g. QEMU)
+exec_prefix = os.environ.get("EXEC_WRAPPER", "")
+exec_prefix = [exec_prefix] if exec_prefix != "" else []
 
 acvp_dir = "test/acvp_data"
 acvp_keygen_json = f"{acvp_dir}/acvp_keygen_internalProjection.json"
@@ -48,7 +53,7 @@ def run_encapDecap_test(tg, tc):
     info(f"Running encapDecap test case {tc['tcId']} ({tg['function']}) ... ", end="")
     if tg["function"] == "encapsulation":
         acvp_bin = get_acvp_binary(tg)
-        acvp_call = [
+        acvp_call = exec_prefix + [
             acvp_bin,
             "encapDecap",
             "AFT",
@@ -72,7 +77,7 @@ def run_encapDecap_test(tg, tc):
         info("OK")
     elif tg["function"] == "decapsulation":
         acvp_bin = get_acvp_binary(tg)
-        acvp_call = [
+        acvp_call = exec_prefix + [
             acvp_bin,
             "encapDecap",
             "VAL",
@@ -99,7 +104,13 @@ def run_encapDecap_test(tg, tc):
 def run_keyGen_test(tg, tc):
     info(f"Running keyGen test case {tc['tcId']} ... ", end="")
     acvp_bin = get_acvp_binary(tg)
-    acvp_call = [acvp_bin, "keyGen", "AFT", f"z={tc['z']}", f"d={tc['d']}"]
+    acvp_call = exec_prefix + [
+        acvp_bin,
+        "keyGen",
+        "AFT",
+        f"z={tc['z']}",
+        f"d={tc['d']}",
+    ]
     result = subprocess.run(acvp_call, encoding="utf-8", capture_output=True)
     if result.returncode != 0:
         err("FAIL!")
