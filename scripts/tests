@@ -26,9 +26,6 @@ def cli():
     common_parser.add_argument(
         "--cflags", help="Extra cflags to passed in (e.g. '-mcpu=cortex-a72')"
     )
-    common_parser.add_argument(
-        "--arch-flags", help="Extra arch flags to passed in (e.g. '-march=armv8')"
-    )
 
     # --auto / --no-auto
     auto_group = common_parser.add_mutually_exclusive_group()
