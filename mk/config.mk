@@ -51,7 +51,6 @@ CFLAGS := \
 # Some Variables #
 ##################
 Q ?= @
-QEMU = qemu-aarch64
 
 HOST_PLATFORM := $(shell uname -s)-$(shell uname -m)
 # linux x86_64

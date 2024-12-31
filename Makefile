@@ -74,11 +74,6 @@ kat: \
 	$(MLKEM768_DIR)/bin/gen_KAT768 \
 	$(MLKEM1024_DIR)/bin/gen_KAT1024
 
-# emulate ARM64 binary on x86_64 machine
-emulate:
-	$(Q)$(MAKE) --quiet CROSS_PREFIX=aarch64-none-linux-gnu- $(TARGET)
-	$(Q)$(QEMU) $(TARGET)
-
 clean:
 	-$(RM) -rf *.gcno *.gcda *.lcov *.o *.so
 	-$(RM) -rf $(BUILD_DIR)
