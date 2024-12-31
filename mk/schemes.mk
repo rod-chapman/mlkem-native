@@ -39,6 +39,20 @@ $(BUILD_DIR)/$(1)/bin/$(2)$(shell echo $(1) | tr -d -c 0-9): LDLIBS += -L$(BUILD
 $(BUILD_DIR)/$(1)/bin/$(2)$(shell echo $(1) | tr -d -c 0-9): $(BUILD_DIR)/$(1)/test/$(2).c.o $(BUILD_DIR)/lib$(1).a
 endef
 
+$(MLKEM512_DIR)/bin/bench_mlkem512: CFLAGS += -Itest/hal
+$(MLKEM768_DIR)/bin/bench_mlkem768: CFLAGS += -Itest/hal
+$(MLKEM1024_DIR)/bin/bench_mlkem1024: CFLAGS += -Itest/hal
+$(MLKEM512_DIR)/bin/bench_components_mlkem512: CFLAGS += -Itest/hal
+$(MLKEM768_DIR)/bin/bench_components_mlkem768: CFLAGS += -Itest/hal
+$(MLKEM1024_DIR)/bin/bench_components_mlkem1024: CFLAGS += -Itest/hal
+
+$(MLKEM512_DIR)/bin/bench_mlkem512: $(MLKEM512_DIR)/test/hal/hal.c.o
+$(MLKEM768_DIR)/bin/bench_mlkem768: $(MLKEM768_DIR)/test/hal/hal.c.o
+$(MLKEM1024_DIR)/bin/bench_mlkem1024: $(MLKEM1024_DIR)/test/hal/hal.c.o
+$(MLKEM512_DIR)/bin/bench_components_mlkem512: $(MLKEM512_DIR)/test/hal/hal.c.o
+$(MLKEM768_DIR)/bin/bench_components_mlkem768: $(MLKEM768_DIR)/test/hal/hal.c.o
+$(MLKEM1024_DIR)/bin/bench_components_mlkem1024: $(MLKEM1024_DIR)/test/hal/hal.c.o
+
 $(MLKEM512_DIR)/bin/%: CFLAGS += -DMLKEM_K=2
 $(MLKEM768_DIR)/bin/%: CFLAGS += -DMLKEM_K=3
 $(MLKEM1024_DIR)/bin/%: CFLAGS += -DMLKEM_K=4
