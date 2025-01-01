@@ -22,13 +22,13 @@ bounds accesses, nor integer overflows during optimized modular arithmetic.
 ## Quickstart for Ubuntu
 
 ```bash
+# Install base packages
+sudo apt-get update
+sudo apt-get install make gcc python3 git
+
 # Clone mlkem-native
 git clone https://github.com/pq-code-package/mlkem-native.git
 cd mlkem-native
-
-# Install base packages
-sudo apt-get update
-sudo apt-get install make gcc python3
 
 # Build and run base tests
 make quickcheck
