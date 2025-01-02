@@ -30,15 +30,15 @@ ifneq ($(findstring Darwin,$(HOST_PLATFORM)),) # if is on macOS
 	$(Q)echo "int main(void) {return 0;}" \
 		| $(CC) -x c - -L$(BUILD_DIR) $(_CFLAGS) \
 		 -all_load -Wl,-undefined,dynamic_lookup -l$(_LIB) \
-		 -Imlkem $(wildcard test/notrandombytes/*.c)
-	$(Q)rm -f a.out
+		 -Imlkem $(wildcard test/notrandombytes/*.c) -o $(@:%.a=%_tmp.a.out)
+	$(Q)rm -f $(@:%.a=%_tmp.a.out)
 else                                           # if not on macOS
 	$(Q)echo "int main(void) {return 0;}" \
 		| $(CC) -x c - -L$(BUILD_DIR) $(_CFLAGS) \
 		-Wl,--whole-archive,--unresolved-symbols=ignore-in-object-files -l$(_LIB) \
 		-Wl,--no-whole-archive \
-		-Imlkem $(wildcard test/notrandombytes/*.c)
-	$(Q)rm -f a.out
+		-Imlkem $(wildcard test/notrandombytes/*.c) -o $(@:%.a=%_tmp.a.out)
+	$(Q)rm -f $(@:%.a=%_tmp.a.out)
 endif
 	$(Q)echo "  AR         Checked for duplicated symbols"
 
