@@ -5,7 +5,6 @@
 all: quickcheck
 
 include mk/config.mk
--include mk/$(MAKECMDGOALS).mk
 include mk/crypto.mk
 include mk/schemes.mk
 include mk/rules.mk
